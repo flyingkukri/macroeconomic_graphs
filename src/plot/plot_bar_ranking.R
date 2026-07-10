@@ -1,0 +1,13 @@
+plot_bar_ranking <- function(dat, caption, label_col = "name", value_col = "value",
+                              x_axis = "", decimal_mark = ".", big_mark = ",",
+                              color = hwwi_blue) {
+  dat[[label_col]] <- factor(dat[[label_col]], levels = rev(dat[[label_col]]))
+  ggplot2::ggplot(dat, ggplot2::aes(x = .data[[value_col]], y = .data[[label_col]])) +
+    ggplot2::geom_col(fill = color) +
+    ggplot2::scale_x_continuous(
+      labels = function(x) format(x, big.mark = big_mark,
+                                   decimal.mark = decimal_mark, scientific = FALSE)
+    ) +
+    ggplot2::labs(x = x_axis, y = "", caption = paste0(caption, " ", format(Sys.Date(), "%Y"))) +
+    hwwi_theme()
+}
