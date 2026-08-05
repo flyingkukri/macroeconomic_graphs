@@ -1,9 +1,9 @@
-# Hamburg monthly trade YoY change (%), total vs. excl. aircraft.
+# Hamburg monthly trade YoY change (%), total vs. excl. other transport equipment.
 # YoY = current month vs. same month prior year (lag 12). Source: 51000-0031/0035.
 
 .hh_trade_yoy <- function(direction, y_axis, caption, labels, decimal_mark, y_limits) {
-  series_pair <- c(direction, paste0(direction, "NoAir"))
-  dat <- with_cache(paste0("genesis_hh_trade_monthly_", DATA_START_YEAR),
+  series_pair <- c(direction, paste0(direction, "ExclTransport"))
+  dat <- with_cache(paste0("genesis_hh_trade_monthly_gp26_", DATA_START_YEAR),
                     fetch_hh_trade_monthly()) |>
     dplyr::filter(series %in% series_pair) |>
     dplyr::arrange(series, date) |>
@@ -23,3 +23,33 @@ hh_export_yoy_change <- function(y_axis, caption, labels,
 hh_import_yoy_change <- function(y_axis, caption, labels,
                                   decimal_mark = ",", y_limits = NULL)
   .hh_trade_yoy("Import", y_axis, caption, labels, decimal_mark, y_limits)
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "trade_hh_export_yoy_change", category = "Trade", label = "Hamburg Monthly Exports: Year-on-Year Change",
+    render = function() {
+        GER <- file.path(OUT_DIR, "trade graphs/German labeling")
+        EN <- file.path(OUT_DIR, "trade graphs/English labeling")
+        render_graph(hh_export_yoy_change("Veränderung gg. Vorjahr (in %)", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            labels = c("Gesamtexporte", "Exporte ohne sonstigen Fahrzeugbau")), "Hamburg Monthly Exports YoY Change_ger",
+            GER)
+        render_graph(hh_export_yoy_change("Change vs. prev. year (in %)", "Data source: Federal statistical office (Destatis)",
+            labels = c("Total Exports", "Exports excl. other transport equipment"), decimal_mark = "."), "Hamburg Monthly Exports YoY Change_en",
+            EN)
+    }),
+list(id = "trade_hh_import_yoy_change", category = "Trade", label = "Hamburg Monthly Imports: Year-on-Year Change",
+    render = function() {
+        GER <- file.path(OUT_DIR, "trade graphs/German labeling")
+        EN <- file.path(OUT_DIR, "trade graphs/English labeling")
+        render_graph(hh_import_yoy_change("Veränderung gg. Vorjahr (in %)", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            labels = c("Gesamteinfuhren", "Einfuhren ohne sonstigen Fahrzeugbau")), "Hamburg Monthly Imports YoY Change_ger",
+            GER)
+        render_graph(hh_import_yoy_change("Change vs. prev. year (in %)", "Data source: Federal statistical office (Destatis)",
+            labels = c("Total Imports", "Imports excl. other transport equipment"), decimal_mark = "."), "Hamburg Monthly Imports YoY Change_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/trade/hh_trade_yoy_change.R", .graph_specs)

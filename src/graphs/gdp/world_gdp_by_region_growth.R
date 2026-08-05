@@ -50,3 +50,24 @@ gdp_world_by_region_growth <- function(y_axis, caption, labels = NULL,
     hwwi_theme() +
     ggplot2::theme(legend.position = "bottom")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "world_gdp_by_region_growth", category = "GDP", label = "World GDP Per Capita Growth by Region",
+    render = function() {
+        GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
+        EN <- file.path(OUT_DIR, "GDP graphs/English labeling")
+        render_graph(gdp_world_by_region_growth("BIP pro Kopf Wachstum (in %)", "Datenquelle: Nationale Statistik der Weltbank und OECD",
+            labels = c("Ostasien und Pazifik", "Europa & Zentralasien", "Lateinamerika & Karibik", "Naher Osten & Nordafrika",
+                "Nordamerika", "Südasien", "Sub-Sahara Afrika"), decimal_mark = ","), "W GDP p.c. real annual Growth World Regions_ger",
+            GER)
+        render_graph(gdp_world_by_region_growth("GDP Per Capita Growth (in %)", "Data Source: World Bank National Accounts Data, and OECD National Accounts Data Files",
+            labels = c("East Asia & Pacific", "Europe & Central Asia", "Latin America & Caribbean", "Middle East & North Africa",
+                "North America", "South Asia", "Sub-Saharan Africa")), "W GDP p.c. real annual Growth World Regions_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/gdp/world_gdp_by_region_growth.R", .graph_specs)

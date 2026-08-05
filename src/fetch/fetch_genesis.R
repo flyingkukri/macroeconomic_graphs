@@ -1,24 +1,3 @@
-# Run once to save credentials for the session (and persist via .Renviron).
-# Defaults to the HWWI account; override via GENESIS_USER / GENESIS_PASS env vars.
-genesis_setup <- function(user = Sys.getenv("GENESIS_USER", "DEU47Q63X1"),
-                           pass = Sys.getenv("GENESIS_PASS", "KJzHVHjmSzUK3aHHHx4i")) {
-  # Reuse existing GENESIS_KEY so credentials survive across sessions once
-  # the key is persisted in .Renviron. Only generate a new key on first use.
-  if (!nzchar(Sys.getenv("GENESIS_KEY"))) {
-    key <- httr2::secret_make_key()
-    do.call(Sys.setenv, setNames(list(key), "GENESIS_KEY"))
-    message("Genesis credentials set for this session.\n",
-            "To persist across sessions, add to .Renviron:\n  GENESIS_KEY=", key,
-            "\n(usethis::edit_r_environ() opens .Renviron)")
-  }
-  auth_path <- restatis:::gen_auth_path("auth_genesis.rds")
-  dir.create(dirname(auth_path), showWarnings = FALSE, recursive = TRUE)
-  creds <- list(username = user, password = pass)
-  attr(creds, "credential_type") <- "username_password"
-  httr2::secret_write_rds(creds, path = auth_path, key = "GENESIS_KEY")
-  invisible(auth_path)
-}
-
 # Fetch any GENESIS table via restatis → long/tidy tibble (ffcsv format).
 # Accepts the same filter params as gen_table: classifyingvariable1/key1, regionalvariable/key, etc.
 genesis_fetch <- function(table_key, start_year = DATA_START_YEAR, end_year = 2100, ...) {
@@ -122,76 +101,81 @@ de_country_to_iso3c <- function(names_de) {
 
 # ── Domain fetchers ────────────────────────────────────────────────────────────
 
-# Shared helper: extracts Export, ExportNoAir, Import, ImportNoAir from
-# a state's 51000-0030 (total trade) and 51000-0034 (commodity trade) raw tables.
-.state_trade_long <- function(trade_raw, air_raw, state_key, geo) {
+# Shared helper: extracts total trade and trade excluding GP division 30
+# ("other transport equipment") from the state tables. Destatis retired the
+# former EGW3 aircraft dimension in March 2026, so the narrower EGW883 series
+# can no longer be refreshed from these tables.
+.state_trade_long <- function(trade_raw, transport_raw, state_key, geo) {
   cf  <- list("1_variable_attribute_code" = state_key)
-  cfa <- list("1_variable_attribute_code" = state_key, "2_variable_attribute_code" = "EGW883")
+  cft <- list("1_variable_attribute_code" = state_key, "2_variable_attribute_code" = "GP19-30")
 
   ex  <- parse_genesis(trade_raw, "WERTA", series_name = "Export",    unit = "Mrd. EUR", geo = geo, class_filters = cf,  scale = 1 / 1e6)
   im  <- parse_genesis(trade_raw, "WERTE", series_name = "Import",    unit = "Mrd. EUR", geo = geo, class_filters = cf,  scale = 1 / 1e6)
-  aex <- parse_genesis(air_raw,   "WERTA", series_name = "AirExport", unit = "Mrd. EUR", geo = geo, class_filters = cfa, scale = 1 / 1e6)
-  aim <- parse_genesis(air_raw,   "WERTE", series_name = "AirImport", unit = "Mrd. EUR", geo = geo, class_filters = cfa, scale = 1 / 1e6)
+  tex <- parse_genesis(transport_raw, "WERTA", series_name = "TransportExport", unit = "Mrd. EUR", geo = geo, class_filters = cft, scale = 1 / 1e6)
+  tim <- parse_genesis(transport_raw, "WERTE", series_name = "TransportImport", unit = "Mrd. EUR", geo = geo, class_filters = cft, scale = 1 / 1e6)
 
-  ex_j <- dplyr::left_join(dplyr::rename(ex, Export = value), dplyr::rename(aex, AirExport = value), by = "date") |>
-    dplyr::mutate(ExportNoAir = Export - dplyr::coalesce(AirExport, 0))
-  im_j <- dplyr::left_join(dplyr::rename(im, Import = value), dplyr::rename(aim, AirImport = value), by = "date") |>
-    dplyr::mutate(ImportNoAir = Import - dplyr::coalesce(AirImport, 0))
+  ex_j <- dplyr::left_join(dplyr::rename(ex, Export = value), dplyr::rename(tex, TransportExport = value), by = "date") |>
+    dplyr::mutate(ExportExclTransport = Export - dplyr::coalesce(TransportExport, 0))
+  im_j <- dplyr::left_join(dplyr::rename(im, Import = value), dplyr::rename(tim, TransportImport = value), by = "date") |>
+    dplyr::mutate(ImportExclTransport = Import - dplyr::coalesce(TransportImport, 0))
 
   dplyr::bind_rows(
-    dplyr::transmute(ex_j, date, value = Export,      series = "Export",      unit = "Mrd. EUR", geo = geo),
-    dplyr::transmute(ex_j, date, value = ExportNoAir, series = "ExportNoAir", unit = "Mrd. EUR", geo = geo),
-    dplyr::transmute(im_j, date, value = Import,      series = "Import",      unit = "Mrd. EUR", geo = geo),
-    dplyr::transmute(im_j, date, value = ImportNoAir, series = "ImportNoAir", unit = "Mrd. EUR", geo = geo)
+    dplyr::transmute(ex_j, date, value = Export, series = "Export", unit = "Mrd. EUR", geo = geo),
+    dplyr::transmute(ex_j, date, value = ExportExclTransport, series = "ExportExclTransport", unit = "Mrd. EUR", geo = geo),
+    dplyr::transmute(im_j, date, value = Import, series = "Import", unit = "Mrd. EUR", geo = geo),
+    dplyr::transmute(im_j, date, value = ImportExclTransport, series = "ImportExclTransport", unit = "Mrd. EUR", geo = geo)
   )
 }
 
-# Hamburg total trade — returns Export, ExportNoAir, Import, ImportNoAir in Mrd. EUR.
+# Hamburg total trade and totals excluding other transport equipment.
 fetch_hh_trade <- function(start_year = DATA_START_YEAR) {
   trade_raw <- genesis_fetch("51000-0030", start_year, regionalvariable = "DLANDX", regionalkey = "02")
-  air_raw   <- genesis_fetch("51000-0034", start_year, classifyingvariable1 = "EGW3", classifyingkey1 = "*",
-                              regionalvariable = "DLANDX", regionalkey = "02")
-  .state_trade_long(trade_raw, air_raw, state_key = "02", geo = "HH")
+  transport_raw <- genesis_fetch("51000-0034", start_year,
+                                 classifyingvariable1 = "GP19B2", classifyingkey1 = "GP19-30",
+                                 regionalvariable = "DLANDX", regionalkey = "02")
+  .state_trade_long(trade_raw, transport_raw, state_key = "02", geo = "HH")
 }
 
-# Hamburg monthly trade (51000-0031/0035) — Export, ExportNoAir, Import, ImportNoAir in Mrd. EUR.
+# Hamburg monthly trade (51000-0031/0035), including variants that exclude
+# GP division 30 (other transport equipment).
 # In 51000-0031: month in variable 1, state in variable 2 (code "02").
-# In 51000-0035: month in variable 1, state in variable 2, commodity in variable 3 (EGW883 = aircraft).
+# In 51000-0035: month in variable 1, state in variable 2, GP2026 in variable 3.
 # Values are in Tsd. EUR; scale = 1/1e6 converts to Mrd. EUR.
 fetch_hh_trade_monthly <- function(start_year = DATA_START_YEAR) {
   trade_raw <- genesis_fetch("51000-0031", start_year,
                               regionalvariable = "DLANDX", regionalkey = "02")
-  air_raw   <- genesis_fetch("51000-0035", start_year,
-                              classifyingvariable1 = "EGW3", classifyingkey1 = "EGW883",
-                              regionalvariable = "DLANDX", regionalkey = "02")
+  transport_raw <- genesis_fetch("51000-0035", start_year,
+                                 classifyingvariable1 = "GP26B2", classifyingkey1 = "GP26-30",
+                                 regionalvariable = "DLANDX", regionalkey = "02")
   cf  <- list("2_variable_attribute_code" = "02")
-  cfa <- list("2_variable_attribute_code" = "02", "3_variable_attribute_code" = "EGW883")
+  cft <- list("2_variable_attribute_code" = "02", "3_variable_attribute_code" = "GP26-30")
   .parse_or_empty <- function(...) tryCatch(parse_genesis(...),
                                             error = function(e) tibble::tibble(date = as.Date(character()), value = numeric()))
   ex  <- parse_genesis(trade_raw, "WERTA", series_name = "Export",    unit = "Mrd. EUR", geo = "HH", class_filters = cf,  scale = 1 / 1e6)
   im  <- parse_genesis(trade_raw, "WERTE", series_name = "Import",    unit = "Mrd. EUR", geo = "HH", class_filters = cf,  scale = 1 / 1e6)
-  aex <- .parse_or_empty(air_raw, "WERTA", series_name = "AirExport", unit = "Mrd. EUR", geo = "HH", class_filters = cfa, scale = 1 / 1e6)
-  aim <- .parse_or_empty(air_raw, "WERTE", series_name = "AirImport", unit = "Mrd. EUR", geo = "HH", class_filters = cfa, scale = 1 / 1e6)
+  tex <- .parse_or_empty(transport_raw, "WERTA", series_name = "TransportExport", unit = "Mrd. EUR", geo = "HH", class_filters = cft, scale = 1 / 1e6)
+  tim <- .parse_or_empty(transport_raw, "WERTE", series_name = "TransportImport", unit = "Mrd. EUR", geo = "HH", class_filters = cft, scale = 1 / 1e6)
   ex_j <- dplyr::left_join(dplyr::rename(ex, Export = value),
-                            dplyr::rename(aex, AirExport = value), by = "date") |>
-    dplyr::mutate(ExportNoAir = Export - dplyr::coalesce(AirExport, 0))
+                            dplyr::rename(tex, TransportExport = value), by = "date") |>
+    dplyr::mutate(ExportExclTransport = Export - dplyr::coalesce(TransportExport, 0))
   im_j <- dplyr::left_join(dplyr::rename(im, Import = value),
-                            dplyr::rename(aim, AirImport = value), by = "date") |>
-    dplyr::mutate(ImportNoAir = Import - dplyr::coalesce(AirImport, 0))
+                            dplyr::rename(tim, TransportImport = value), by = "date") |>
+    dplyr::mutate(ImportExclTransport = Import - dplyr::coalesce(TransportImport, 0))
   dplyr::bind_rows(
-    dplyr::transmute(ex_j, date, value = Export,      series = "Export",      unit = "Mrd. EUR", geo = "HH"),
-    dplyr::transmute(ex_j, date, value = ExportNoAir, series = "ExportNoAir", unit = "Mrd. EUR", geo = "HH"),
-    dplyr::transmute(im_j, date, value = Import,      series = "Import",      unit = "Mrd. EUR", geo = "HH"),
-    dplyr::transmute(im_j, date, value = ImportNoAir, series = "ImportNoAir", unit = "Mrd. EUR", geo = "HH")
+    dplyr::transmute(ex_j, date, value = Export, series = "Export", unit = "Mrd. EUR", geo = "HH"),
+    dplyr::transmute(ex_j, date, value = ExportExclTransport, series = "ExportExclTransport", unit = "Mrd. EUR", geo = "HH"),
+    dplyr::transmute(im_j, date, value = Import, series = "Import", unit = "Mrd. EUR", geo = "HH"),
+    dplyr::transmute(im_j, date, value = ImportExclTransport, series = "ImportExclTransport", unit = "Mrd. EUR", geo = "HH")
   )
 }
 
-# Lower Saxony total trade — returns Export, ExportNoAir, Import, ImportNoAir in Mrd. EUR.
+# Lower Saxony total trade and totals excluding other transport equipment.
 fetch_ls_trade <- function(start_year = DATA_START_YEAR) {
   trade_raw <- genesis_fetch("51000-0030", start_year, regionalvariable = "DLANDX", regionalkey = "03")
-  air_raw   <- genesis_fetch("51000-0034", start_year, classifyingvariable1 = "EGW3", classifyingkey1 = "*",
-                              regionalvariable = "DLANDX", regionalkey = "03")
-  .state_trade_long(trade_raw, air_raw, state_key = "03", geo = "LS")
+  transport_raw <- genesis_fetch("51000-0034", start_year,
+                                 classifyingvariable1 = "GP19B2", classifyingkey1 = "GP19-30",
+                                 regionalvariable = "DLANDX", regionalkey = "03")
+  .state_trade_long(trade_raw, transport_raw, state_key = "03", geo = "LS")
 }
 
 # Hamburg (or other state) exports by country for choropleth maps.
@@ -212,19 +196,42 @@ fetch_trade_by_country <- function(year, regional_key = "02") {
 
 # Germany commodity exports/imports for pie charts.
 # Returns data frame with Group label, export and import value in Mrd. EUR.
+.TRADE_WAM2_CODES <- paste0("WA", sprintf("%02d", 1:99))
+.TRADE_GP19_CODES <- paste0(
+  "GP19-",
+  c("01", "02", "03", "05", "06", "07", "08",
+    as.character(10:17), "19", as.character(20:32), "35", "38")
+)
+
+.genesis_dimension_columns <- function(dat, variable_code) {
+  variable_cols <- grep("^[0-9]+_variable_code$", names(dat), value = TRUE)
+  hit <- variable_cols[vapply(variable_cols, function(nm) {
+    any(dat[[nm]] == variable_code, na.rm = TRUE)
+  }, logical(1))]
+  if (length(hit) != 1L)
+    stop("Could not identify GENESIS dimension ", variable_code)
+  prefix <- sub("_variable_code$", "", hit[[1]])
+  c(
+    code = paste0(prefix, "_variable_attribute_code"),
+    label = paste0(prefix, "_variable_attribute_label")
+  )
+}
+
 fetch_ger_trade_commodity <- function(year) {
   raw <- genesis_fetch("51000-0005", year, year,
-                        classifyingvariable1 = "EGW3", classifyingkey1 = "*")
+                        classifyingvariable1 = "WAM2",
+                        classifyingkey1 = .TRADE_WAM2_CODES)
+  commodity_cols <- .genesis_dimension_columns(raw, "WAM2")
   dat <- raw[!is.na(raw$value) & raw$value != "-" &
-               raw[["1_variable_attribute_code"]] == "DG", , drop = FALSE]
+               !is.na(raw[[commodity_cols[["code"]]]]), , drop = FALSE]
   ex <- dat[dat$value_variable_code == "WERTA", ]
   im <- dat[dat$value_variable_code == "WERTE", ]
   merged <- merge(
-    data.frame(Code  = ex[["2_variable_attribute_code"]],
-               Group = ex[["2_variable_attribute_label"]],
+    data.frame(Code  = ex[[commodity_cols[["code"]]]],
+               Group = ex[[commodity_cols[["label"]]]],
                GerExport = as.numeric(gsub(",", ".", ex$value)) / 1e6,
                stringsAsFactors = FALSE),
-    data.frame(Code  = im[["2_variable_attribute_code"]],
+    data.frame(Code  = im[[commodity_cols[["code"]]]],
                GerImport = as.numeric(gsub(",", ".", im$value)) / 1e6,
                stringsAsFactors = FALSE),
     by = "Code", all.x = TRUE
@@ -237,24 +244,54 @@ fetch_ger_trade_commodity <- function(year) {
 # state_key: "02" = Hamburg, "03" = Lower Saxony, etc.
 fetch_state_trade_commodity <- function(year, state_key = "02") {
   raw <- genesis_fetch("51000-0034", year, year,
-                        classifyingvariable1 = "EGW3", classifyingkey1 = "*",
+                        classifyingvariable1 = "GP19B2",
+                        classifyingkey1 = .TRADE_GP19_CODES,
                         regionalvariable = "DLANDX", regionalkey = state_key)
+  commodity_cols <- .genesis_dimension_columns(raw, "GP19B2")
   dat <- raw[!is.na(raw$value) & raw$value != "-" &
                !is.na(raw[["1_variable_attribute_code"]]) &
                raw[["1_variable_attribute_code"]] == state_key, , drop = FALSE]
   ex <- dat[dat$value_variable_code == "WERTA", ]
   im <- dat[dat$value_variable_code == "WERTE", ]
   merged <- merge(
-    data.frame(Code   = ex[["2_variable_attribute_code"]],
-               Group  = ex[["2_variable_attribute_label"]],
+    data.frame(Code   = ex[[commodity_cols[["code"]]]],
+               Group  = ex[[commodity_cols[["label"]]]],
                Export = as.numeric(gsub(",", ".", ex$value)) / 1e6,
                stringsAsFactors = FALSE),
-    data.frame(Code   = im[["2_variable_attribute_code"]],
+    data.frame(Code   = im[[commodity_cols[["code"]]]],
                Import = as.numeric(gsub(",", ".", im$value)) / 1e6,
                stringsAsFactors = FALSE),
     by = "Code", all.x = TRUE
   )
   merged[order(-merged$Export), ]
+}
+
+# Germany-equivalent GP2019 structure obtained by summing the 16 state rows.
+# This uses the same classification as fetch_state_trade_commodity(), which is
+# required for state-vs-Germany deviation calculations.
+fetch_ger_trade_commodity_gp19 <- function(year) {
+  raw <- genesis_fetch("51000-0034", year, year,
+                       classifyingvariable1 = "GP19B2",
+                       classifyingkey1 = .TRADE_GP19_CODES,
+                       regionalvariable = "DLANDX",
+                       regionalkey = sprintf("%02d", 1:16))
+  commodity_cols <- .genesis_dimension_columns(raw, "GP19B2")
+  state_codes <- sprintf("%02d", 1:16)
+  dat <- raw[
+    !is.na(raw$value) & !raw$value %in% c("-", "/", ".", "", "...") &
+      raw[["1_variable_attribute_code"]] %in% state_codes,
+    , drop = FALSE
+  ]
+  dat$amount <- as.numeric(gsub(",", ".", dat$value)) / 1e6
+  dat$Code <- dat[[commodity_cols[["code"]]]]
+  dat$Group <- dat[[commodity_cols[["label"]]]]
+  ex <- stats::aggregate(amount ~ Code + Group,
+                         data = dat[dat$value_variable_code == "WERTA", ], sum)
+  im <- stats::aggregate(amount ~ Code,
+                         data = dat[dat$value_variable_code == "WERTE", ], sum)
+  names(ex)[names(ex) == "amount"] <- "GerExport"
+  names(im)[names(im) == "amount"] <- "GerImport"
+  merge(ex, im, by = "Code", all.x = TRUE)
 }
 
 # State imports by country of origin (choropleth maps).
@@ -333,9 +370,10 @@ fetch_state_deviation <- function(yr, state_key, direction = "export") {
   ger_col   <- if (direction == "export") "GerExport" else "GerImport"
   cache_tag <- switch(state_key, "02" = "HH", "03" = "LS", state_key)
 
-  state_dat <- with_cache(paste0("genesis_51000-0034_", cache_tag, "_", yr),
+  state_dat <- with_cache(paste0("genesis_51000-0034_gp19_explicit_", cache_tag, "_", yr),
                            fetch_state_trade_commodity(yr, state_key = state_key))
-  ger_dat   <- with_cache(paste0("genesis_51000-0005_", yr), fetch_ger_trade_commodity(yr))
+  ger_dat   <- with_cache(paste0("genesis_51000-0034_all_states_gp19_explicit_", yr),
+                          fetch_ger_trade_commodity_gp19(yr))
 
   comp <- merge(
     data.frame(Code = state_dat$Code, state_val = state_dat[[state_col]], stringsAsFactors = FALSE),

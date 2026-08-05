@@ -37,3 +37,29 @@ ger_export_yoy_change <- function(y_axis, caption, decimal_mark = ",")
 
 ger_import_yoy_change <- function(y_axis, caption, decimal_mark = ",")
   .ger_trade_yoy("WERTE", "import_yoy", y_axis, caption, decimal_mark)
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "trade_ger_export_yoy_change", category = "Trade", label = "Germany Monthly Exports: Year-on-Year Change",
+    render = function() {
+        GER <- file.path(OUT_DIR, "trade graphs/German labeling")
+        EN <- file.path(OUT_DIR, "trade graphs/English labeling")
+        render_graph(ger_export_yoy_change("Veränderung gg. Vorjahresmonat (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)"),
+            "Germany Monthly Exports YoY Change_ger", GER)
+        render_graph(ger_export_yoy_change("Change vs. same month prev. year (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
+            decimal_mark = "."), "Germany Monthly Exports YoY Change_en", EN)
+    }),
+list(id = "trade_ger_import_yoy_change", category = "Trade", label = "Germany Monthly Imports: Year-on-Year Change",
+    render = function() {
+        GER <- file.path(OUT_DIR, "trade graphs/German labeling")
+        EN <- file.path(OUT_DIR, "trade graphs/English labeling")
+        render_graph(ger_import_yoy_change("Veränderung gg. Vorjahresmonat (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)"),
+            "Germany Monthly Imports YoY Change_ger", GER)
+        render_graph(ger_import_yoy_change("Change vs. same month prev. year (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
+            decimal_mark = "."), "Germany Monthly Imports YoY Change_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/trade/ger_trade_yoy_change.R", .graph_specs)

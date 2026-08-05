@@ -40,3 +40,19 @@ ger_employment_rate <- function(y_axis, caption, decimal_mark = ",") {
 
   plot_timeseries(dat, y_axis = y_axis, caption = caption, decimal_mark = decimal_mark)
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_employment_rate", category = "Employment", label = "Germany Employment Rate", render = function() {
+    GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+    EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+    render_graph(ger_employment_rate("Erwerbsquote (in %)", "Datenquelle: Statistisches Bundesamt (Destatis)"),
+        "GER employment rate_ger", GER)
+    render_graph(ger_employment_rate("Employment Rate (in %)", "Data source: Federal statistical office (Destatis)",
+        decimal_mark = "."), "GER employment rate_en", EN)
+})
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_employment_rate.R", .graph_specs)

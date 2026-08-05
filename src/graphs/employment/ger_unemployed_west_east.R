@@ -27,3 +27,22 @@ ger_unemployed_west_east <- function(y_axis, caption, labels = NULL,
                          decimal_mark = decimal_mark, big_mark = big_mark,
                          x_breaks = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_unemployed_west_east", category = "Employment", label = "Germany Registered Unemployed: West vs East",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_unemployed_west_east("Arbeitslose (in Mio.)", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            labels = c("Früheres Bundesgebiet", "Neue Länder"), decimal_mark = ",", big_mark = "."),
+            "GER unemployed west east_ger", GER)
+        render_graph(ger_unemployed_west_east("Unemployed in Mill.", "Data source: Federal statistical office (Destatis)",
+            labels = c("West Germany", "East Germany"), decimal_mark = ".", big_mark = ","), "GER unemployed west east_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_unemployed_west_east.R", .graph_specs)

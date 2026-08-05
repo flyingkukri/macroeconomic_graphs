@@ -34,3 +34,24 @@ ger_short_time_employment <- function(caption,
                   decimal_mark = decimal_mark,
                   y_max_right  = y_max_right)
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "employment_short_time", category = "Employment", label = "Germany Short-Time Work and Unemployment Rate",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_short_time_employment("Datenquelle: Statistisches Bundesamt (Destatis)", label_kurzarbeit = "Kurzarbeiter",
+            label_unemployment = "Arbeitslosenquote", y_axis_left = "Kurzarbeiter (in Tsd.)", y_axis_right = "Arbeitslosenquote in %",
+            decimal_mark = ",", y_max_right = 15), "GER unemployed rate and short term employee_ger",
+            GER)
+        render_graph(ger_short_time_employment("Data source: Federal statistical office (Destatis)",
+            label_kurzarbeit = "Short-time workers", label_unemployment = "Unemployment rate", y_axis_left = "Short-time workers (in thousands)",
+            y_axis_right = "Unemployment rate in %", decimal_mark = ".", y_max_right = 15), "GER unemployed rate and short term employee_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_short_time_employment.R", .graph_specs)

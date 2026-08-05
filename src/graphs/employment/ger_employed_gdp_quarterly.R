@@ -42,3 +42,26 @@ ger_employed_gdp_quarterly <- function(caption,
                   x_breaks     = "2 years",
                   y_min_at_zero = FALSE)
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_employed_gdp_quarterly", category = "Employment", label = "Germany Employed Persons and GDP - Quarterly Seasonally Adjusted",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_employed_gdp_quarterly(caption = "Datenquelle: Statistisches Bundesamt (Destatis)",
+            label_employed = "Erwerbstätige (Arbeitsort, saisonbereinigt)", label_bip = "BIP (saisonbereinigt, preisbereinigt, verkettet)",
+            y_axis_left = "Anzahl Erwerbstätige (in Tsd.)", y_axis_right = "BIP nach Quartalen (Mrd. EUR)",
+            decimal_mark = ",", big_mark = "."), "GER number of employed persons and gdp by quarter (seasonal adjusted)_ger",
+            GER)
+        render_graph(ger_employed_gdp_quarterly(caption = "Data source: Federal Statistical Office (Destatis)",
+            label_employed = "Employed persons (in Germany, seasonally adjusted)", label_bip = "GDP (seasonally adjusted, price adjusted, chain-linked)",
+            y_axis_left = "Number of employed persons (in 1000)", y_axis_right = "GDP by quarter (bn EUR)",
+            decimal_mark = ".", big_mark = ","), "GER number of employed persons and gdp by quarter (seasonal adjusted)_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_employed_gdp_quarterly.R", .graph_specs)

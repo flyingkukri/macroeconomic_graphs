@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# R and IDE session state
+.Rhistory
+.RData
+.Ruserdata
+.Rproj.user/
+.posit/
+
+# Local credentials and environment configuration
+.Renviron
+.env
+.env.*
+!.env.example
+auth_*.rds
+
+# Downloaded data and generated graph output
+cache/
+out/
+
+# Rendered documentation (source Markdown remains tracked)
+ADDING_GRAPHS.html
+ADDING_GRAPHS_files/
+
+# Temporary/editor files
+*.swp
+*.swo
+*~

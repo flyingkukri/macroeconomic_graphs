@@ -34,3 +34,20 @@ ger_unemployment_seasonal <- function(y_axis, caption, decimal_mark = ",", big_m
                   decimal_mark = decimal_mark, big_mark = big_mark,
                   x_breaks = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_unemployment_seasonal", category = "Employment", label = "Germany Unemployment Rate, Quarterly Seasonally Adjusted",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_unemployment_seasonal("Erwerbslosenquote in %, saisonbereinigt", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            decimal_mark = ","), "GER unemployed persons quarterly seasonally adjusted_ger", GER)
+        render_graph(ger_unemployment_seasonal("Unemployment rate in %, seasonally adjusted", "Data source: Federal statistical office (Destatis)",
+            decimal_mark = "."), "GER unemployed persons quarterly seasonally adjusted_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_unemployment_seasonal.R", .graph_specs)

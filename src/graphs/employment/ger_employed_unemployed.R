@@ -37,3 +37,24 @@ ger_employed_unemployed <- function(caption,
                   big_mark     = big_mark,
                   x_breaks     = "5 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_employed_unemployed", category = "Employment", label = "Germany Employed and Unemployed Persons",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_employed_unemployed(caption = "Datenquelle: Statistisches Bundesamt (Destatis)",
+            label_employed = "Erwerbstätige", label_unemployed = "Erwerbslose", y_axis_left = "Erwerbstätige (in Mio.)",
+            y_axis_right = "Erwerbslose (in Mio.)", decimal_mark = ",", big_mark = "."), "GER employed unemployed_ger",
+            GER)
+        render_graph(ger_employed_unemployed(caption = "Data source: Federal statistical office (Destatis)",
+            label_employed = "Employed", label_unemployed = "Unemployed", y_axis_left = "Employed (in million)",
+            y_axis_right = "Unemployed (in million)", decimal_mark = ".", big_mark = ","), "GER employed unemployed_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_employed_unemployed.R", .graph_specs)

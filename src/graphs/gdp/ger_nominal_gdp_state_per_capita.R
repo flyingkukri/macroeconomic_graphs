@@ -2,8 +2,8 @@
 # Source: Statistische Ämter des Bundes und der Länder (local CSV).
 
 .read_gdp_state_per_capita <- function() {
-  csv_path <- file.path("R scripts", "Functions GDP graphs",
-                        "wirtschaftsleistung-bundeslaender-2024.csv")
+  csv_path <- file.path("data", "wirtschaftsleistung-bundeslaender-2024.csv")
+  if (!file.exists(csv_path)) stop("Missing repository data file: ", csv_path)
   raw <- utils::read.csv2(csv_path, fileEncoding = "UTF-8-BOM", stringsAsFactors = FALSE)
   colnames(raw) <- c("geo", "value")
   exclude <- c("Westliche Bundesländer", "Östliche Bundesländer", "Deutschland")
@@ -36,3 +36,29 @@ ger_nominal_gdp_state_per_capita_map <- function(legend_title, caption) {
                       legend_title = legend_title, caption = caption,
                       low = "white", high = hwwi_rubin)
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_nominal_gdp_state_per_capita", category = "GDP", label = "Germany Nominal GDP per Capita by State (StatLA)",
+    render = function() {
+        GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
+        EN <- file.path(OUT_DIR, "GDP graphs/English labeling")
+        render_graph(ger_nominal_gdp_state_per_capita("Nominales BIP pro Einwohner (in EUR)", "Datenquelle: Statistische Ämter des Bundes und der Länder",
+            decimal_mark = ",", big_mark = "."), "GER Nominal GDP by State per Capita_ger", GER, height = 7)
+        render_graph(ger_nominal_gdp_state_per_capita("Nominal GDP per Capita (in EUR)", "Data source: Federal and State Statistical Offices",
+            decimal_mark = ".", big_mark = ","), "GER Nominal GDP by State per Capita_en", EN, height = 7)
+    }),
+list(id = "ger_nominal_gdp_state_per_capita_map", category = "GDP", label = "Germany Nominal GDP per Capita by State - Choropleth (StatLA)",
+    render = function() {
+        GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
+        EN <- file.path(OUT_DIR, "GDP graphs/English labeling")
+        render_graph(ger_nominal_gdp_state_per_capita_map("Nominales BIP pro Einwohner (in EUR)", "Datenquelle: Statistische Ämter des Bundes und der Länder"),
+            "GER Nominal GDP by State per Capita Map_ger", GER)
+        render_graph(ger_nominal_gdp_state_per_capita_map("Nominal GDP per Capita (in EUR)", "Data source: Federal and State Statistical Offices"),
+            "GER Nominal GDP by State per Capita Map_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/gdp/ger_nominal_gdp_state_per_capita.R", .graph_specs)

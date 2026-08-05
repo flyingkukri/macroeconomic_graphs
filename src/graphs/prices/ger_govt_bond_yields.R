@@ -96,3 +96,31 @@ ger_govt_bond_yields <- function(y_axis, caption, decimal_mark = ",",
     ggplot2::theme(legend.position = "bottom") +
     ggplot2::guides(color = ggplot2::guide_legend(nrow = 3))
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_govt_bond_yields", category = "Prices", label = "Long-Term Government Bond Yields: Top/Bottom 5 EU Countries (Eurostat)",
+    render = function() {
+        GER <- file.path(OUT_DIR, "prices graphs/German labeling")
+        EN <- file.path(OUT_DIR, "prices graphs/English labeling")
+        cn_ger <- c(AT = "Österreich", BE = "Belgien", BG = "Bulgarien", CY = "Zypern", CZ = "Tschechien",
+            DE = "Deutschland", DK = "Dänemark", EA = "EU", EE = "Estland", EL = "Griechenland", ES = "Spanien",
+            FI = "Finnland", FR = "Frankreich", HR = "Kroatien", HU = "Ungarn", IE = "Irland", IT = "Italien",
+            LT = "Litauen", LU = "Luxemburg", LV = "Lettland", MT = "Malta", NL = "Niederlande", PL = "Polen",
+            PT = "Portugal", RO = "Rumänien", SE = "Schweden", SI = "Slowenien", SK = "Slowakei", UK = "Vereinigtes Königreich")
+        cn_en <- c(AT = "Austria", BE = "Belgium", BG = "Bulgaria", CY = "Cyprus", CZ = "Czechia", DE = "Germany",
+            DK = "Denmark", EA = "EU", EE = "Estonia", EL = "Greece", ES = "Spain", FI = "Finland", FR = "France",
+            HR = "Croatia", HU = "Hungary", IE = "Ireland", IT = "Italy", LT = "Lithuania", LU = "Luxembourg",
+            LV = "Latvia", MT = "Malta", NL = "Netherlands", PL = "Poland", PT = "Portugal", RO = "Romania",
+            SE = "Sweden", SI = "Slovenia", SK = "Slovakia", UK = "United Kingdom")
+        render_graph(ger_govt_bond_yields(y_axis = "Rendite (%)", caption = "Datenquelle: Eurostat",
+            decimal_mark = ",", country_names = cn_ger), "Long term returns of top bottom 5 government bonds_ger",
+            GER)
+        render_graph(ger_govt_bond_yields(y_axis = "Yield (%)", caption = "Data source: Eurostat", decimal_mark = ".",
+            country_names = cn_en), "Long term returns of top bottom 5 government bonds_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/prices/ger_govt_bond_yields.R", .graph_specs)

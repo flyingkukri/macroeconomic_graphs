@@ -48,3 +48,24 @@ ger_interest_rate_cpi <- function(caption,
                   decimal_mark = decimal_mark,
                   x_breaks     = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_interest_rate_cpi", category = "Prices", label = "Germany: ECB Deposit Rate and Inflation Rate",
+    render = function() {
+        GER <- file.path(OUT_DIR, "prices graphs/German labeling")
+        EN <- file.path(OUT_DIR, "prices graphs/English labeling")
+        render_graph(ger_interest_rate_cpi(caption = "Datenquelle: EZB / FRED, Statistisches Bundesamt (Destatis)",
+            label_rate = "EZB-Einlagenzins", label_inflation = "Inflationsrate", y_axis_left = "EZB-Einlagenzins (in %)",
+            y_axis_right = "Inflationsrate (in %)", decimal_mark = ","), "GER ECB rate and inflation_ger",
+            GER)
+        render_graph(ger_interest_rate_cpi(caption = "Data source: ECB / FRED, Federal statistical office (Destatis)",
+            label_rate = "ECB deposit rate", label_inflation = "Inflation rate", y_axis_left = "ECB deposit rate (in %)",
+            y_axis_right = "Inflation rate (in %)", decimal_mark = "."), "GER ECB rate and inflation_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/prices/ger_interest_rate_cpi.R", .graph_specs)

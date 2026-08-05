@@ -105,3 +105,26 @@ ger_interest_rate_hpi_dax <- function(caption,
       fill  = ggplot2::guide_legend(order = 2)
     )
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_interest_rate_hpi_dax", category = "Prices", label = "Development of Interest Rates, House Price Index and DAX",
+    render = function() {
+        GER <- file.path(OUT_DIR, "prices graphs/German labeling")
+        EN <- file.path(OUT_DIR, "prices graphs/English labeling")
+        render_graph(ger_interest_rate_hpi_dax(caption = "Datenquelle: Destatis, Deutsche Bundesbank, Yahoo Finance",
+            label_band = "Zinsband", label_ecb = "Hauptrefinanzierungssatz der EZB", label_hpi = "Häuserpreisindex",
+            label_dax = "DAX", y_axis_left = "Zinssatz in %", y_axis_right = "Indexwert (Start = 100)",
+            decimal_mark = ","), "Development of interest rates, german house-price-index and dax index_ger",
+            GER)
+        render_graph(ger_interest_rate_hpi_dax(caption = "Data source: Destatis, German Federal Bank, Yahoo Finance",
+            label_band = "Interest rate band", label_ecb = "ECB interest rate for main refinancing operations",
+            label_hpi = "House price index", label_dax = "DAX", y_axis_left = "Interest rate in %", y_axis_right = "Index value (Start = 100)",
+            decimal_mark = "."), "Development of interest rates, german house-price-index and dax index_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/prices/ger_interest_rate_hpi_dax.R", .graph_specs)

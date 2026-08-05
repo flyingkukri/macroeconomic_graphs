@@ -109,3 +109,26 @@ ger_survey_interest_cpi <- function(caption,
       fill  = ggplot2::guide_legend(order = 1)
     )
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_survey_interest_cpi", category = "Prices", label = "Survey on Development of Interest Rates and German Consumer Price Index",
+    render = function() {
+        GER <- file.path(OUT_DIR, "prices graphs/German labeling")
+        EN <- file.path(OUT_DIR, "prices graphs/English labeling")
+        render_graph(ger_survey_interest_cpi(caption = "Datenquelle: Destatis, Deutsche Bundesbank, Federal Reserve System (US)",
+            label_band = "Zinsbandbreite", label_effr = "Effektiver Tagesgeldsatz (USA)", label_ecb_main = "EZB-Hauptrefinanzierungssatz",
+            label_cpi = "Verbraucherpreisindex", y_axis_left = "Zinssatz in %", y_axis_right = "Veränderung Verbraucherpreisindex zum Vorjahresmonat in %",
+            decimal_mark = ","), "Survey on development of interest rate and german consumer-pric-index_ger",
+            GER)
+        render_graph(ger_survey_interest_cpi(caption = "Data source: Destatis, German Federal Bank, Board of Governors of the Federal Reserve System (US)",
+            label_band = "Interest rate band", label_effr = "Effektive Federal Funds rate", label_ecb_main = "ECB interest rate for main refinancing operations",
+            label_cpi = "Consumer price index", y_axis_left = "Interest rate in %", y_axis_right = "Change of consumer price index to previous year's month in %",
+            decimal_mark = "."), "Survey on development of interest rate and german consumer-pric-index_en",
+            EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/prices/ger_survey_interest_cpi.R", .graph_specs)

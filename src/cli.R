@@ -1,12 +1,81 @@
 #!/usr/bin/env Rscript
 # Run from project root: Rscript src/cli.R
+# Optional flags:
+#   --start-year=YYYY       override the earliest year fetched
+#   --output-folder=NAME   save every selected graph directly in out/NAME/
+#   --language=de|en       render only German or only English labels
+
+.cli_args <- commandArgs(trailingOnly = TRUE)
+
+.start_year_flag <- grep("^--start-year=", .cli_args, value = TRUE)
+.output_folder_flag <- grep("^--output-folder=", .cli_args, value = TRUE)
+.language_flag <- grep("^--language=", .cli_args, value = TRUE)
+
+if (length(.start_year_flag) > 1L || length(.output_folder_flag) > 1L ||
+    length(.language_flag) > 1L) {
+  stop("Each CLI option may be specified only once", call. = FALSE)
+}
+
+.custom_start_year <- if (length(.start_year_flag) > 0) {
+  suppressWarnings(as.integer(sub("^--start-year=", "", .start_year_flag[1])))
+} else {
+  NULL
+}
+if (!is.null(.custom_start_year) && is.na(.custom_start_year)) {
+  stop("Invalid --start-year value: ", .start_year_flag[1])
+}
+
+.output_folder <- if (length(.output_folder_flag)) {
+  trimws(sub("^--output-folder=", "", .output_folder_flag[[1]]))
+} else {
+  NULL
+}
+if (!is.null(.output_folder) &&
+    (!nzchar(.output_folder) || .output_folder %in% c(".", "..") ||
+     grepl("[/\\\\]", .output_folder) || startsWith(.output_folder, "~"))) {
+  stop(
+    "--output-folder must be one folder name directly inside out/",
+    call. = FALSE
+  )
+}
+
+.language <- if (length(.language_flag)) {
+  tolower(trimws(sub("^--language=", "", .language_flag[[1]])))
+} else {
+  NULL
+}
+.language_aliases <- c(de = "de", german = "de", en = "en", english = "en")
+if (!is.null(.language) && !.language %in% names(.language_aliases)) {
+  stop("--language must be 'de', 'en', 'german', or 'english'", call. = FALSE)
+}
+if (!is.null(.language)) .language <- unname(.language_aliases[[.language]])
+
+.cli_args <- .cli_args[
+  !grepl("^--(start-year|output-folder|language)=", .cli_args)
+]
 
 source("src/bootstrap.R")
-invisible(lapply(
-  list.files("src/graphs", pattern = "\\.R$", recursive = TRUE, full.names = TRUE),
-  source
-))
-source("src/registry.R")
+.default_out_dir <- OUT_DIR
+
+if (!is.null(.custom_start_year)) {
+  DATA_START_YEAR <- .custom_start_year
+  OUT_DIR <- file.path(OUT_DIR, paste0("custom start ", .custom_start_year))
+  cat("Custom start year:", .custom_start_year, "\n")
+}
+
+if (!is.null(.output_folder)) {
+  options(hwwi.output.dir = file.path(.default_out_dir, .output_folder))
+  cat("Output folder:", getOption("hwwi.output.dir"), "(flat)\n")
+} else if (!is.null(.custom_start_year)) {
+  cat("Output folder:", OUT_DIR, "\n")
+}
+
+if (!is.null(.language)) {
+  options(hwwi.render.language = .language)
+  cat("Label language:", if (.language == "de") "German" else "English", "\n")
+}
+
+.graphs <- discover_graphs()
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -17,7 +86,7 @@ source("src/registry.R")
   readLines(con = stdin(), n = 1)
 }
 
-.show_menu <- function(reg) {
+.show_menu <- function(reg, show_cli_options = FALSE) {
   cat("\n")
   .hr()
   cat("  HWWI Macroeconomic Standard Graphs\n")
@@ -35,8 +104,17 @@ source("src/registry.R")
   }
   cat("\n")
   .hr()
-  cat("  Enter numbers (e.g. 1,3,5-7), category names (e.g. gdp,trade),\n")
-  cat("  or 'all'.\n")
+  cat("  Enter numbers (e.g. 1,3,5-7), graph IDs, category names\n")
+  cat("  (e.g. gdp,trade), or 'all'.\n")
+  if (show_cli_options) {
+    cat("\n")
+    cat("  Optional command-line flags (restart with these before selecting):\n")
+    cat("    --start-year=YYYY       Set the earliest data year\n")
+    cat("    --output-folder=NAME   Save files directly in out/NAME/\n")
+    cat("    --language=de|en       Render German or English labels only\n")
+    cat("  Example:\n")
+    cat("    Rscript src/cli.R --output-folder=report --language=en gdp\n")
+  }
   .hr()
   cat("\n")
 }
@@ -46,9 +124,10 @@ source("src/registry.R")
   if (input == "all") return(seq_along(reg))
 
   cats <- tolower(sapply(reg, `[[`, "category"))
+  ids  <- tolower(sapply(reg, `[[`, "id"))
   idx  <- integer(0)
 
-  for (token in strsplit(input, "[,\\s]+")[[1]]) {
+  for (token in strsplit(input, "[[:space:],]+")[[1]]) {
     token <- trimws(token)
     if (!nzchar(token)) next
 
@@ -59,6 +138,8 @@ source("src/registry.R")
       idx <- c(idx, as.integer(token))
     } else if (token %in% cats) {
       idx <- c(idx, which(cats == token))
+    } else if (token %in% ids) {
+      idx <- c(idx, which(ids == token))
     } else {
       cat("  Unknown token ignored:", token, "\n")
     }
@@ -69,26 +150,28 @@ source("src/registry.R")
 
 # ── main ──────────────────────────────────────────────────────────────────────
 
-# Support non-interactive usage: Rscript src/cli.R [render] <selection>
+# Support non-interactive usage:
+# Rscript src/cli.R [options] [render] <selection>
 # e.g. Rscript src/cli.R all
 #      Rscript src/cli.R render all
 #      Rscript src/cli.R gdp
 #      Rscript src/cli.R 1,3,5-7
-.cli_args <- commandArgs(trailingOnly = TRUE)
+#      Rscript src/cli.R --start-year=1995 gdp
+#      Rscript src/cli.R --output-folder=report --language=en gdp
 .cli_args <- .cli_args[!tolower(.cli_args) %in% "render"]  # strip optional "render" verb
 
 if (length(.cli_args) > 0) {
   input <- paste(.cli_args, collapse = ",")
-  .show_menu(.graph_registry)
+  .show_menu(.graphs)
   cat(">", input, "\n")
-  selected <- .parse_selection(input, .graph_registry)
+  selected <- .parse_selection(input, .graphs)
   if (length(selected) == 0) {
     cat("No valid graphs selected. Exiting.\n")
     quit(status = 1)
   }
   cat("\nWill generate", length(selected), "graph(s). Starting...\n\n")
 } else {
-  .show_menu(.graph_registry)
+  .show_menu(.graphs, show_cli_options = TRUE)
   input <- .read_line("> ")
 
   if (!nzchar(trimws(input))) {
@@ -96,7 +179,7 @@ if (length(.cli_args) > 0) {
     quit(status = 0)
   }
 
-  selected <- .parse_selection(input, .graph_registry)
+  selected <- .parse_selection(input, .graphs)
 
   if (length(selected) == 0) {
     cat("No valid graphs selected. Exiting.\n")
@@ -104,7 +187,7 @@ if (length(.cli_args) > 0) {
   }
 
   cat("\nWill generate:\n")
-  for (i in selected) cat(sprintf("  [%d] %s\n", i, .graph_registry[[i]]$label))
+  for (i in selected) cat(sprintf("  [%d] %s\n", i, .graphs[[i]]$label))
   cat("\nProceed? [Y/n] ")
   confirm <- readLines(con = stdin(), n = 1)
 
@@ -120,7 +203,7 @@ n_total <- length(selected)
 
 for (k in seq_along(selected)) {
   i <- selected[[k]]
-  g <- .graph_registry[[i]]
+  g <- .graphs[[i]]
   cat(sprintf("[%d/%d] %s ... ", k, n_total, g$label))
   t0 <- proc.time()[["elapsed"]]
   tryCatch({
@@ -138,7 +221,8 @@ if (length(errors)) {
   cat("  Errors:\n")
   for (e in errors) cat("  ✗ ", e, "\n", sep = "")
 } else {
-  cat(sprintf("  ✓ %d graph(s) generated in out/\n", n_total))
+  output_dir <- getOption("hwwi.output.dir", OUT_DIR)
+  cat(sprintf("  ✓ %d graph(s) generated in %s/\n", n_total, output_dir))
 }
 .hr()
 cat("\n")

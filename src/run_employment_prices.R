@@ -1,8 +1,7 @@
 source("src/bootstrap.R")
-invisible(lapply(list.files("src/graphs", pattern = "\\.R$", recursive = TRUE, full.names = TRUE), source))
-source("src/registry.R")
+.graphs <- discover_graphs()
 
-for (g in .graph_registry) {
+for (g in .graphs) {
   if (g$category %in% c("Employment", "Prices")) {
     tryCatch(
       g$render(),

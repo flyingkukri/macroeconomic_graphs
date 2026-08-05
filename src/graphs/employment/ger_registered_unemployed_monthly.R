@@ -22,3 +22,20 @@ ger_registered_unemployed_monthly <- function(y_axis, caption,
                   decimal_mark = decimal_mark, big_mark = big_mark,
                   x_breaks = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_registered_unemployed_monthly", category = "Employment", label = "Germany Registered Unemployed (monthly, total)",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_registered_unemployed_monthly("Arbeitslose (in Mio.)", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            decimal_mark = ",", big_mark = "."), "GER registered unemployed monthly_ger", GER)
+        render_graph(ger_registered_unemployed_monthly("Registered Unemployed (in million)", "Data source: Federal statistical office (Destatis)",
+            decimal_mark = ".", big_mark = ","), "GER registered unemployed monthly_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_registered_unemployed_monthly.R", .graph_specs)

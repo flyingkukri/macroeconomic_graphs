@@ -26,3 +26,22 @@ ger_unemployment_civilian <- function(y_axis, caption,
                          decimal_mark = decimal_mark,
                          x_breaks = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_unemployment_civilian", category = "Employment", label = "Germany Unemployment Rate: Civilian and Registered (annual)",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_unemployment_civilian(y_axis = "Arbeitslosenquote in %", caption = "Datenquelle: Statistisches Bundesamt (Destatis)",
+            label_all = "Arbeitslosenquote aller ziv. Erwerbspersonen", label_dep = "Arbeitslosenquote abh. ziv. Erwerbspersonen",
+            decimal_mark = ","), "GER unemployment rate civilian and registered_ger", GER)
+        render_graph(ger_unemployment_civilian(y_axis = "Unemployment rate in %", caption = "Data source: Federal statistical office (Destatis)",
+            label_all = "Unemployment as percent of civilian labour force", label_dep = "Rate of registered unemployed",
+            decimal_mark = "."), "GER unemployment rate civilian and registered_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_unemployment_civilian.R", .graph_specs)

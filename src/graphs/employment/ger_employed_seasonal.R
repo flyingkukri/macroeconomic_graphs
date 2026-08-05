@@ -17,3 +17,22 @@ ger_employed_seasonal <- function(y_axis, caption, decimal_mark = ",", big_mark 
                   decimal_mark = decimal_mark, big_mark = big_mark,
                   x_breaks = "2 years")
 }
+
+# ── Graph module ─────────────────────────────────────────────────────────────────────────────
+# Metadata and rendering live with the implementation so discovery needs no central registry.
+.graph_specs <- list(
+list(id = "ger_employed_seasonal", category = "Employment", label = "Germany Employed Persons, Quarterly Seasonally Adjusted",
+    render = function() {
+        GER <- file.path(OUT_DIR, "employment graphs/German labeling")
+        EN <- file.path(OUT_DIR, "employment graphs/English labeling")
+        render_graph(ger_employed_seasonal("Anzahl Erwerbstätige (in Tsd.), saisonbereinigt", "Datenquelle: Statistisches Bundesamt (Destatis)",
+            decimal_mark = ",", big_mark = "."), "GER employed persons quarterly seasonally adjusted_ger",
+            GER)
+        render_graph(ger_employed_seasonal("Number of Employed Persons (in 1000), seasonally adjusted",
+            "Data source: Federal statistical office (Destatis)", decimal_mark = ".", big_mark = ","),
+            "GER employed persons quarterly seasonally adjusted_en", EN)
+    })
+)
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/employment/ger_employed_seasonal.R", .graph_specs)

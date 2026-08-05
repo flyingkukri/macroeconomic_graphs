@@ -1,6 +1,12 @@
 # ── Data ──────────────────────────────────────────────────────────────────────
 DATA_START_YEAR <- 2000   # earliest year to fetch for all time series
 
+# World Bank aggregate regions used by both regional GDP graph modules. Keep
+# these in shared configuration because graph discovery sources each module in
+# an isolated environment.
+REGION_CODES <- c("Z4", "Z7", "ZJ", "ZQ", "XU", "8S", "ZG")
+REGION_ISO3C <- c("EAS", "ECS", "LCN", "MEA", "NAC", "SAS", "SSF")
+
 # ── Paths ─────────────────────────────────────────────────────────────────────
 OUT_DIR   <- "out"
 CACHE_DIR <- "cache"
