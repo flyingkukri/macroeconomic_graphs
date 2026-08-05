@@ -1,5 +1,13 @@
 ## Requirements
-R package dependencies are installed automatically on first run via `pacman::p_load` (see [src/theme.R](src/theme.R)): `tidyverse`, `sf`, `ggplot2`, `extrafont`, `patchwork`, `countrycode`, `scales`, `ggrepel`, `ggnewscale`, `rnaturalearth`, `rnaturalearthdata`, `WDI`, `readxl`, `httr`, `jsonlite`, `xml2`, plus `restatis` and `httr2` (loaded in [src/bootstrap.R](src/bootstrap.R)).
+Most R package dependencies are installed automatically on first run via `pacman::p_load` (see [src/theme.R](src/theme.R)): `tidyverse`, `sf`, `ggplot2`, `extrafont`, `patchwork`, `countrycode`, `scales`, `ggrepel`, `ggnewscale`, `rnaturalearth`, `rnaturalearthdata`, `WDI`, `readxl`, `httr`, `jsonlite`, and `xml2`.
+
+Install the packages loaded or used outside that automatic list before the first run:
+
+```r
+install.packages(c("restatis", "httr2", "seasonal"))
+```
+
+`restatis` and `httr2` are loaded by [src/bootstrap.R](src/bootstrap.R). The `seasonal` package is required by graphs that perform X-13ARIMA-SEATS adjustment locally.
 
 ## Configuration
 
@@ -60,7 +68,7 @@ Rscript src/cli.R --output-folder=monthly-report --language=en gdp
 
 In the interactive menu you can also enter numbers, comma-separated lists, ranges (`5-7`), category names, or `all`. The options can be combined with interactive or non-interactive selections:
 
-- `--start-year=YYYY` changes the earliest year fetched.
+- `--start-year=YYYY` changes the earliest year for graph modules that use `DATA_START_YEAR`. Fixed-period and snapshot graphs are unaffected.
 - `--output-folder=NAME` writes every selected file directly into `out/NAME/`, without the normal category and language subfolders. `NAME` must be a single folder name, not a path.
 - `--language=de|en` renders only German or English labeling. The full names `german` and `english` are also accepted.
 
@@ -74,7 +82,7 @@ Rscript src/run_employment_prices.R
 Rscript src/run_trade.R
 ```
 
-Each run reports per-graph success/failure; a failure in one graph doesn't stop the rest of the batch.
+The main CLI reports per-graph success/failure. The category-specific batch scripts report failures; in both cases, a failure in one graph doesn't stop the rest of the batch.
 
 ## Graph module example
 
@@ -148,22 +156,24 @@ For more information on how to add a new graph, see [ADDING_GRAPHS.md](ADDING_GR
 
 ## Output
 
-Charts are written to:
+Charts are written to the output folders specified by each graph module, normally:
 
 ```
-out/<Category> graphs/German labeling/<title>.jpeg
-out/<Category> graphs/English labeling/<title>.jpeg
+out/<category-folder>/German labeling/<title>.jpeg
+out/<category-folder>/English labeling/<title>.jpeg
 ```
+
+The current category-folder names are `GDP graphs`, `employment graphs`, `prices graphs`, and `trade graphs`. A small number of Prices modules currently use `Prices graphs` with an uppercase `P`, so those files may appear in a separate directory on case-sensitive file systems.
 
 e.g. `out/GDP graphs/English labeling/GER BIP annual growth - chain index_en.jpeg`.
 
-Runs with `--start-year=YYYY` write to `out/custom start <YYYY>/<Category> graphs/...` instead, keeping the standard output untouched.
+Runs with `--start-year=YYYY` write to `out/custom start <YYYY>/<category-folder>/...` instead, keeping the standard output untouched.
 
 Runs with `--output-folder=NAME` output all graphs into `out/NAME/`. Add `--language=de` or `--language=en` to generate only one label variant.
 
 
 #### Developer Note
-Fetched data is cached to `cache/<key>.rds` so repeated runs don't re-hit the data sources. A different `--start-year` produces different cache keys (they're derived in part from the start year), so it fetches fresh data rather than reusing the default run's cache. Delete the relevant `.rds` file (or call `bust_cache()` in an R session) to force a refetch.
+Fetched data is cached to `cache/<key>.rds` so repeated runs don't re-hit the data sources. For modules that use `DATA_START_YEAR`, a different `--start-year` produces different cache keys, so those modules fetch fresh data rather than reusing the default run's cache. Delete the relevant `.rds` file (or call `bust_cache()` in an R session) to force a refetch.
 
 ## Project structure
 

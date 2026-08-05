@@ -4,10 +4,10 @@ Afterwards, add the metadata of the graph to the bottom of the file.
 
 The code specification is divided into three stages: 
 1. Fetch the data
-2. Transform the data as neccessary
+2. Transform the data as necessary
 3. Plot it using one of the predefined plotting helpers
 
-For each stage, this library includes predefined helper function to simplify the flow. 
+For each stage, this library includes predefined helper functions to simplify the flow.
 Section 0 will show an example graph and explain the components, while the latter sections serve as a reference for the helper functions for each part of the plot generation. 
 
 ## 0. Example Graph
@@ -281,7 +281,7 @@ Most GENESIS tables already offer seasonally-adjusted or chain-indexed variants 
 
 ## 4. Pick a plot builder
 
-All builders are located in `src/plot/`, apply `hwwi_theme()` automatically, and append the current year to `caption`.
+All builders are located in `src/plot/` and append the current year to `caption`. Most apply `hwwi_theme()` automatically; `plot_pie()` uses `ggplot2::theme_void()` with its own caption and margin styling.
 
 ### `plot_timeseries()`
 
@@ -392,7 +392,7 @@ plot_bar(
 )
 ```
 
-Creates grouped bars on a discrete numeric x-axis.
+Creates grouped bars on a discrete numeric x-axis. Although the function's legacy default is `x_col = "date"`, its x scale is numeric: create a numeric column such as `year` and pass `x_col = "year"`, as the existing graph modules do.
 
 Parameters:
 
@@ -626,8 +626,8 @@ it the path of the graph file after the plotting functions are implemented.
   }
 ))
 
-if (!exists("run_standalone_graph_file", mode = "function")) source("src/graph_modules.R")
-run_standalone_graph_file("src/graphs/gdp/my_new_graph.R", .graph_specs)
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/gdp/my_new_graph.R", .graph_specs)
 ```
 
 Conventions to match the existing entries:
