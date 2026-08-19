@@ -1,8 +1,8 @@
-plot_bar_ranking <- function(dat, caption, label_col = "name", value_col = "value",
-                              x_axis = "", decimal_mark = ".", big_mark = ",",
+plot_bar_ranking <- function(dat, caption, x_axis = "",
+                              decimal_mark = ".", big_mark = ",",
                               color = hwwi_blue) {
-  dat[[label_col]] <- factor(dat[[label_col]], levels = rev(dat[[label_col]]))
-  ggplot2::ggplot(dat, ggplot2::aes(x = .data[[value_col]], y = .data[[label_col]])) +
+  dat$geo <- factor(dat$geo, levels = rev(unique(dat$geo)))
+  ggplot2::ggplot(dat, ggplot2::aes(x = value, y = geo)) +
     ggplot2::geom_col(fill = color) +
     ggplot2::scale_x_continuous(
       labels = function(x) format(x, big.mark = big_mark,

@@ -9,11 +9,9 @@
   dat <- parse_genesis(raw, value_var = value_var,
                         class_filters = list("2_variable_attribute_code" = filter_code),
                         series_name = series_name, geo = "DEU") |>
-    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01"))) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   plot_bar(dat, y_axis = y_axis, caption = caption,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", colors = c(alpha(hwwi_blue, 0.9))) +
+            decimal_mark = decimal_mark, colors = c(alpha(hwwi_blue, 0.9))) +
     ggplot2::theme(legend.position = "none")
 }
 

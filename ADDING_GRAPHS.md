@@ -2,13 +2,27 @@
 Extending the graphs library requires two steps. First, using the predefined building blocks, give a code specification of the graph to be created. 
 Afterwards, add the metadata of the graph to the bottom of the file.
 
+## Steps to adding a Graph
 The code specification is divided into three stages: 
 1. Fetch the data
 2. Transform the data as necessary
 3. Plot it using one of the predefined plotting helpers
 
-For each stage, this library includes predefined helper functions to simplify the flow.
-Section 0 will show an example graph and explain the components, while the latter sections serve as a reference for the helper functions for each part of the plot generation. 
+For each stage, this library includes predefined helper functions to simplify the flow. 
+First, in the next subsection, we explain the fundamental data type of this project.
+Then, in Section 0 will show an example graph and explain the components, while the latter sections serve as a reference for the helper functions for each part of the plot generation.
+
+## The Data Tibble
+
+The flow is based on a data tibble which has 5 fields:
+
+```r
+tibble(date, value, series, unit, geo)
+```
+
+For all plots that are based on time series, the `date` and `value` fields are necessary. The `date` field is of type `Date` and the `value` field is numeric. More specialized plots may require other fields. The plot-builder reference [below](#4-pick-a-plot-builder) lists the necessary fields for every helper.
+
+# Steps for Adding a Graph
 
 ## 0. Example Graph
 ```r
@@ -39,6 +53,7 @@ Section 0 will show an example graph and explain the components, while the latte
     dplyr::group_by(geo) |>
     dplyr::group_modify(~ yoy_growth(.x, value_col = "value")) |>
     dplyr::ungroup() |>
+    dplyr::mutate(unit = "%") |>
     dplyr::filter(!is.na(value), date == max(date)) |>
     dplyr::arrange(value)  # latest year's growth, one bar per state
 }
@@ -47,8 +62,8 @@ Section 0 will show an example graph and explain the components, while the latte
 ger_nominal_gdp_state_growth <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
   dat <- .ger_gdp_state_growth_helper()
   # 3. Choose the plot type
-  plot_bar_ranking(dat, caption = caption, label_col = "geo", value_col = "value",
-                    x_axis = y_axis, decimal_mark = decimal_mark, big_mark = big_mark)
+  plot_bar_ranking(dat, caption = caption, x_axis = y_axis,
+                    decimal_mark = decimal_mark, big_mark = big_mark)
 }
 
 # 4. Add metadata for the graph.  
@@ -159,6 +174,9 @@ Parameters:
 
 - `dataset`: Bundesbank SDMX dataset identifier.
 - `key`: Series key within the dataset.
+
+Example: You can find Bundesbank time series on the [website](https://statistiken.bundesbank.de/statistiken-de/suche). 
+The time series "Harmonisierter Verbraucherpreisindex / Deutschland / Ursprungswerte / Insgesamt / % gegen Vorjahr" has the time series code `BBDP1.​M.​DE.​N.​HVPI.​C.​A00000.​VGJ.​LV`. The first part BBDP1 is the dataset, and the rest is the series key.
 
 Returns `tibble(date, value)`. Add `series`, `unit`, and `geo` columns if the selected plot builder requires them.
 
@@ -296,6 +314,13 @@ plot_timeseries(
 
 Creates a single-series line chart.
 
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric observations used on the y-axis.
+
+The standard `series`, `unit`, and `geo` fields are not required.
+
 Parameters:
 
 - `dat`: Data frame containing `date` and `value`.
@@ -321,6 +346,14 @@ plot_timeseries_multi(
 ```
 
 Creates a multiple-series line chart using the `series` column.
+
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric observations used on the y-axis.
+- `series`: Character or factor identifier used to separate and color the lines.
+
+The standard `unit` and `geo` fields are not required.
 
 Parameters:
 
@@ -348,6 +381,14 @@ plot_bar_date(
 
 Creates overlapping bars on a date axis using the `series` column. Set factor levels so the series that should appear behind is drawn first.
 
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric observations determining bar heights.
+- `series`: Character or factor identifier used to group and color the bars.
+
+The standard `unit` and `geo` fields are not required.
+
 Parameters:
 
 - `dat`: Data frame containing `date`, `value`, and `series`.
@@ -371,6 +412,13 @@ plot_bar_growth(
 
 Creates annual growth bars with percentage labels.
 
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric percentage values determining bar heights and labels.
+
+The standard `series`, `unit`, and `geo` fields are not required.
+
 Parameters:
 
 - `dat`: Data frame containing `date` and percentage `value`.
@@ -385,25 +433,29 @@ Parameters:
 ```r
 plot_bar(
   dat, y_axis, caption, labels = NULL,
-  decimal_mark = ".", x_col = "date", y_col = "value",
-  group_col = "series",
+  decimal_mark = ".",
   colors = c(alpha(hwwi_blue, 0.9), alpha(hwwi_rubin, 0.9)),
   y_limits = NULL, position = "dodge"
 )
 ```
 
-Creates grouped bars on a discrete numeric x-axis. Although the function's legacy default is `x_col = "date"`, its x scale is numeric: create a numeric column such as `year` and pass `x_col = "year"`, as the existing graph modules do.
+Creates grouped bars on a date axis. It uses the standard data-tibble fields directly and labels every observed date by year.
+
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric observations determining bar heights.
+- `series`: Character or factor identifier used to group and color the bars.
+
+The standard `unit` and `geo` fields are not required.
 
 Parameters:
 
-- `dat`: Data frame containing the x, y, and grouping columns.
+- `dat`: Data frame containing `date`, `value`, and `series`.
 - `y_axis`: Y-axis title.
 - `caption`: Source caption.
 - `labels`: Optional legend labels in group order.
 - `decimal_mark`: Decimal separator used in value labels.
-- `x_col`: Name of the x-axis column.
-- `y_col`: Name of the value column.
-- `group_col`: Name of the fill-group column.
 - `colors`: Fill colors in group order.
 - `y_limits`: Optional two-element vector of y-axis limits.
 - `position`: Bar-position adjustment, such as `"dodge"`, `"stack"`, or `"identity"`.
@@ -413,7 +465,7 @@ Parameters:
 ```r
 plot_bar_deviation(
   dat, caption,
-  label_col = "Group", value_col = "diff", x_axis = "",
+  x_axis = "",
   decimal_mark = ".", big_mark = ",",
   positive_label = "Above average", negative_label = "Below average",
   colors = c(hwwi_blue, hwwi_rubin)
@@ -422,12 +474,17 @@ plot_bar_deviation(
 
 Creates horizontal diverging bars around zero.
 
+Required fields for the data tibble:
+
+- `series`: Character or factor category labels displayed on the y-axis.
+- `value`: Numeric deviations; their signs determine the positive or negative group.
+
+The standard `date`, `unit`, and `geo` fields are not used by this helper.
+
 Parameters:
 
-- `dat`: Data frame containing category labels and numeric deviations.
+- `dat`: Standard data tibble containing `series` and `value`.
 - `caption`: Source caption.
-- `label_col`: Name of the category-label column.
-- `value_col`: Name of the deviation column.
 - `x_axis`: Numeric-axis title.
 - `decimal_mark`: Decimal separator used in value labels.
 - `big_mark`: Thousands separator used in value labels.
@@ -440,19 +497,24 @@ Parameters:
 ```r
 plot_bar_ranking(
   dat, caption,
-  label_col = "name", value_col = "value", x_axis = "",
+  x_axis = "",
   decimal_mark = ".", big_mark = ",", color = hwwi_blue
 )
 ```
 
 Creates a horizontal ranking bar chart.
 
+Required fields for the data tibble:
+
+- `geo`: Character or factor geographic labels displayed on the y-axis.
+- `value`: Numeric observations determining bar lengths.
+
+The standard `date`, `series`, and `unit` fields are not used by this helper.
+
 Parameters:
 
-- `dat`: Data frame containing category labels and numeric values, ordered as they should appear in the ranking.
+- `dat`: Standard data tibble containing `geo` and `value`, ordered as the bars should appear in the ranking.
 - `caption`: Source caption.
-- `label_col`: Name of the category-label column.
-- `value_col`: Name of the numeric value column.
 - `x_axis`: Numeric-axis title.
 - `decimal_mark`: Decimal separator used in value labels.
 - `big_mark`: Thousands separator used in value labels.
@@ -471,6 +533,14 @@ plot_dual_axis(
 ```
 
 Creates two line series with different units on aligned left and right axes.
+
+Required fields for the data tibble:
+
+- `date`: `Date` values used on the x-axis.
+- `value`: Numeric observations to be mapped to the two y-axes.
+- `series`: Character or factor identifier. It must contain the values supplied through `series_left` and `series_right`.
+
+The standard `unit` and `geo` fields are not required. Axis units are supplied through `y_axis_left` and `y_axis_right`, not read from `unit`.
 
 Parameters:
 
@@ -491,8 +561,7 @@ Parameters:
 
 ```r
 plot_pie(
-  dat, group_col = "Group", value_col = "GerExport",
-  caption = "", big_mark = ".", decimal_mark = ",", colors = NULL,
+  dat, caption = "", big_mark = ".", decimal_mark = ",", colors = NULL,
   n_inside = 1, inside_x = 1.8, text_size = 3.1,
   start_angle = pi / 5, x_limit = 5.2,
   plot_margin = ggplot2::margin(-70, 200, -20, -20)
@@ -501,11 +570,16 @@ plot_pie(
 
 Creates a polar composition chart with value and percentage labels.
 
+Required fields for the data tibble:
+
+- `series`: Character or factor slice labels.
+- `value`: Numeric slice sizes. Values should be non-negative and their sum must be greater than zero.
+
+The standard `date`, `unit`, and `geo` fields are not used by this helper.
+
 Parameters:
 
-- `dat`: Data frame containing group labels and positive numeric values.
-- `group_col`: Name of the slice-label column.
-- `value_col`: Name of the slice-value column.
+- `dat`: Standard data tibble containing `series` and `value`.
 - `caption`: Source caption.
 - `big_mark`: Thousands separator used in value labels.
 - `decimal_mark`: Decimal separator used in percentage labels.
@@ -529,6 +603,13 @@ plot_choropleth_world(
 
 Creates a world choropleth with a sequential square-root color scale.
 
+Required fields for the data tibble:
+
+- `geo`: Character ISO3C country codes used to join observations to the world geometry.
+- The column named by `fill_col`: Non-negative numeric values used for the map fill; `value` by default.
+
+The standard `date`, `series`, and `unit` fields are not required. Filter time-dependent data to one observation per geography before plotting.
+
 Parameters:
 
 - `dat`: Data frame whose `geo` column contains ISO3C country codes.
@@ -551,6 +632,13 @@ plot_choropleth_world_div(
 
 Creates a world choropleth with a zero-centered diverging color scale.
 
+Required fields for the data tibble:
+
+- `geo`: Character ISO3C country codes used to join observations to the world geometry.
+- The column named by `fill_col`: Numeric values, including negative or positive deviations, used for the map fill; `value` by default.
+
+The standard `date`, `series`, and `unit` fields are not required. Filter time-dependent data to one observation per geography before plotting.
+
 Parameters:
 
 - `dat`: Data frame whose `geo` column contains ISO3C country codes.
@@ -570,6 +658,13 @@ plot_choropleth_ger(
 ```
 
 Creates a choropleth of the German states.
+
+Required fields for the data tibble:
+
+- `geo`: Character German-state names matching the Natural Earth `name` field.
+- The column named by `fill_col`: Numeric values used for the map fill; `value` by default.
+
+The standard `date`, `series`, and `unit` fields are not required. Filter time-dependent data to one observation per state before plotting.
 
 Parameters:
 

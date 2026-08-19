@@ -1,42 +1,54 @@
 # Annual bar charts for state-level and Germany trade values.
-# Hamburg and LS from respective fetch helpers; Germany from GENESIS 51000-0001.
+# Hamburg annual values are summed from the archived monthly aircraft series so
+# the definition remains consistent with the historical charts.
+
+.hh_trade_annual_aircraft <- function() {
+  with_cache(paste0("genesis_hh_trade_monthly_", HH_AIRCRAFT_ARCHIVE_START_YEAR),
+             fetch_hh_trade_monthly(HH_AIRCRAFT_ARCHIVE_START_YEAR)) |>
+    dplyr::mutate(year = as.integer(format(date, "%Y"))) |>
+    dplyr::group_by(series, year) |>
+    dplyr::summarise(
+      value = sum(value),
+      months = dplyr::n_distinct(date),
+      unit = dplyr::first(unit),
+      geo = dplyr::first(geo),
+      .groups = "drop"
+    ) |>
+    dplyr::filter(months == 12, !is.na(value)) |>
+    dplyr::transmute(
+      date = as.Date(sprintf("%d-01-01", year)),
+      value, series, unit, geo
+    )
+}
 
 trade_export_hamburg <- function(y_axis, caption, labels,
                                   decimal_mark = ",", y_limits = c(0, 90)) {
-  dat <- with_cache(paste0("genesis_hh_trade_gp19_", DATA_START_YEAR), fetch_hh_trade()) |>
-    dplyr::filter(series %in% c("Export", "ExportExclTransport")) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+  dat <- .hh_trade_annual_aircraft() |>
+    dplyr::filter(series %in% c("Export", "ExportNoAir"))
   plot_bar(dat, y_axis = y_axis, caption = caption, labels = labels,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits)
+            decimal_mark = decimal_mark, y_limits = y_limits)
 }
 
 trade_import_hamburg <- function(y_axis, caption, labels,
                                   decimal_mark = ",", y_limits = NULL) {
-  dat <- with_cache(paste0("genesis_hh_trade_gp19_", DATA_START_YEAR), fetch_hh_trade()) |>
-    dplyr::filter(series %in% c("Import", "ImportExclTransport")) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+  dat <- .hh_trade_annual_aircraft() |>
+    dplyr::filter(series %in% c("Import", "ImportNoAir"))
   plot_bar(dat, y_axis = y_axis, caption = caption, labels = labels,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits)
+            decimal_mark = decimal_mark, y_limits = y_limits)
 }
 
 trade_export_lowersaxony <- function(y_axis, caption, decimal_mark = ",", y_limits = NULL) {
   dat <- with_cache(paste0("genesis_ls_trade_gp19_", DATA_START_YEAR), fetch_ls_trade()) |>
-    dplyr::filter(series == "Export") |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+    dplyr::filter(series == "Export")
   plot_bar(dat, y_axis = y_axis, caption = caption,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits)
+            decimal_mark = decimal_mark, y_limits = y_limits)
 }
 
 trade_import_lowersaxony <- function(y_axis, caption, decimal_mark = ",", y_limits = NULL) {
   dat <- with_cache(paste0("genesis_ls_trade_gp19_", DATA_START_YEAR), fetch_ls_trade()) |>
-    dplyr::filter(series == "Import") |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+    dplyr::filter(series == "Import")
   plot_bar(dat, y_axis = y_axis, caption = caption,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits)
+            decimal_mark = decimal_mark, y_limits = y_limits)
 }
 
 trade_export_germany <- function(y_axis, caption, decimal_mark = ",", y_limits = NULL) {
@@ -45,11 +57,9 @@ trade_export_germany <- function(y_axis, caption, decimal_mark = ",", y_limits =
   dat <- parse_genesis(raw, value_var = "WERTA",
                         series_name = "Export", unit = "Mrd. EUR", geo = "DEU",
                         scale = 1 / 1e6) |>
-    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01"))) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   plot_bar(dat, y_axis = y_axis, caption = caption,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits,
+            decimal_mark = decimal_mark, y_limits = y_limits,
             colors = c(alpha(hwwi_blue, 0.9)))
 }
 
@@ -59,37 +69,35 @@ trade_import_germany <- function(y_axis, caption, decimal_mark = ",", y_limits =
   dat <- parse_genesis(raw, value_var = "WERTE",
                         series_name = "Import", unit = "Mrd. EUR", geo = "DEU",
                         scale = 1 / 1e6) |>
-    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01"))) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   plot_bar(dat, y_axis = y_axis, caption = caption,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series", y_limits = y_limits,
+            decimal_mark = decimal_mark, y_limits = y_limits,
             colors = c(alpha(hwwi_rubin, 0.9)))
 }
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────
 # Metadata and rendering live with the implementation so discovery needs no central registry.
 .graph_specs <- list(
-list(id = "trade_export_hamburg", category = "Trade", label = "Hamburg Exports (total/excl. other transport equipment)",
+list(id = "trade_export_hamburg", category = "Trade", label = "Hamburg Exports (total/excl. aircraft)",
     render = function() {
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(trade_export_hamburg("Exporte (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamtexporte", "Exporte ohne sonstigen Fahrzeugbau"), decimal_mark = ","),
+            labels = c("Gesamtexporte", "Exporte ohne Luft- und Raumfahrzeuge"), decimal_mark = ","),
             "Export Hamburg_ger", GER)
         render_graph(trade_export_hamburg("Exports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Exports", "Exports excl. other transport equipment"), decimal_mark = "."), "Export Hamburg_en",
+            labels = c("Total Exports", "Exports excl. Aircraft"), decimal_mark = "."), "Export Hamburg_en",
             EN)
     }),
-list(id = "trade_import_hamburg", category = "Trade", label = "Hamburg Imports (total/excl. other transport equipment)",
+list(id = "trade_import_hamburg", category = "Trade", label = "Hamburg Imports (total/excl. aircraft)",
     render = function() {
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(trade_import_hamburg("Importe (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamtimporte", "Importe ohne sonstigen Fahrzeugbau"), decimal_mark = ","),
+            labels = c("Gesamtimporte", "Importe ohne Luft- und Raumfahrzeuge"), decimal_mark = ","),
             "Import Hamburg_ger", GER)
         render_graph(trade_import_hamburg("Imports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Imports", "Imports excl. other transport equipment"), decimal_mark = "."), "Import Hamburg_en",
+            labels = c("Total Imports", "Imports excl. Aircraft"), decimal_mark = "."), "Import Hamburg_en",
             EN)
     }),
 list(id = "trade_export_germany", category = "Trade", label = "Germany Total Exports (annual)", render = function() {

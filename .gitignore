@@ -9,6 +9,12 @@
 .Rproj.user/
 .posit/
 
+# R-generated plots, batch output, and document caches
+Rplots*.pdf
+*.Rout
+*.Rout.fail
+*_cache/
+
 # Local credentials and environment configuration
 .Renviron
 .env

@@ -6,20 +6,17 @@
                          genesis_fetch("51000-0001"))
   nom <- parse_genesis(raw_nom, value_var = nom_var,
                         series_name = "Nominal", unit = "Mrd. EUR", geo = "DEU",
-                        scale = 1 / 1e6) |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+                        scale = 1 / 1e6)
 
   raw_real <- with_cache(paste0("genesis_81000-0027_", DATA_START_YEAR),
                           genesis_fetch("81000-0027"))
   real <- parse_genesis(raw_real, value_var = real_var,
-                         series_name = "Real", unit = "Mrd. EUR", geo = "DEU") |>
-    dplyr::mutate(year = as.integer(format(date, "%Y")))
+                         series_name = "Real", unit = "Mrd. EUR", geo = "DEU")
 
   dat <- dplyr::bind_rows(nom, real) |>
     dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   plot_bar(dat, y_axis = y_axis, caption = caption, labels = labels,
-            decimal_mark = decimal_mark, x_col = "year", y_col = "value",
-            group_col = "series")
+            decimal_mark = decimal_mark)
 }
 
 ger_export_development_nominal_real <- function(y_axis, caption, labels = NULL,

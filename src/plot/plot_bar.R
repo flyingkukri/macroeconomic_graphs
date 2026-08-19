@@ -23,14 +23,13 @@ plot_bar_growth <- function(dat, y_axis, caption, decimal_mark = ".",
 }
 
 plot_bar <- function(dat, y_axis, caption, labels = NULL,
-                      decimal_mark = ".", x_col = "date", y_col = "value",
-                      group_col = "series",
+                      decimal_mark = ".",
                       colors = c(alpha(hwwi_blue, 0.9), alpha(hwwi_rubin, 0.9)),
                       y_limits = NULL, position = "dodge") {
   ggplot2::ggplot(dat, ggplot2::aes(
-    x    = .data[[x_col]],
-    y    = .data[[y_col]],
-    fill = .data[[group_col]]
+    x = date,
+    y = value,
+    fill = series
   )) +
     ggplot2::geom_bar(stat = "identity", position = position) +
     ggplot2::scale_fill_manual(
@@ -38,7 +37,10 @@ plot_bar <- function(dat, y_axis, caption, labels = NULL,
       labels = if (!is.null(labels)) labels else ggplot2::waiver(),
       guide  = ggplot2::guide_legend(title = "")
     ) +
-    ggplot2::scale_x_continuous(breaks = sort(unique(dat[[x_col]]))) +
+    ggplot2::scale_x_date(
+      breaks = sort(unique(dat$date)),
+      date_labels = "%Y"
+    ) +
     ggplot2::scale_y_continuous(
       limits = y_limits,
       labels = function(x) format(x, decimal.mark = decimal_mark, scientific = FALSE)

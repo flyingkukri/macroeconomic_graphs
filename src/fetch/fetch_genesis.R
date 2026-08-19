@@ -136,36 +136,36 @@ fetch_hh_trade <- function(start_year = DATA_START_YEAR) {
   .state_trade_long(trade_raw, transport_raw, state_key = "02", geo = "HH")
 }
 
-# Hamburg monthly trade (51000-0031/0035), including variants that exclude
-# GP division 30 (other transport equipment).
+# Hamburg monthly trade (51000-0031/0035), including the historical variants
+# that exclude aircraft (EGW883).
 # In 51000-0031: month in variable 1, state in variable 2 (code "02").
-# In 51000-0035: month in variable 1, state in variable 2, GP2026 in variable 3.
+# In 51000-0035: month in variable 1, state in variable 2, commodity in variable 3.
 # Values are in Tsd. EUR; scale = 1/1e6 converts to Mrd. EUR.
 fetch_hh_trade_monthly <- function(start_year = DATA_START_YEAR) {
   trade_raw <- genesis_fetch("51000-0031", start_year,
                               regionalvariable = "DLANDX", regionalkey = "02")
-  transport_raw <- genesis_fetch("51000-0035", start_year,
-                                 classifyingvariable1 = "GP26B2", classifyingkey1 = "GP26-30",
-                                 regionalvariable = "DLANDX", regionalkey = "02")
+  air_raw <- genesis_fetch("51000-0035", start_year,
+                           classifyingvariable1 = "EGW3", classifyingkey1 = "EGW883",
+                           regionalvariable = "DLANDX", regionalkey = "02")
   cf  <- list("2_variable_attribute_code" = "02")
-  cft <- list("2_variable_attribute_code" = "02", "3_variable_attribute_code" = "GP26-30")
+  cfa <- list("2_variable_attribute_code" = "02", "3_variable_attribute_code" = "EGW883")
   .parse_or_empty <- function(...) tryCatch(parse_genesis(...),
                                             error = function(e) tibble::tibble(date = as.Date(character()), value = numeric()))
   ex  <- parse_genesis(trade_raw, "WERTA", series_name = "Export",    unit = "Mrd. EUR", geo = "HH", class_filters = cf,  scale = 1 / 1e6)
   im  <- parse_genesis(trade_raw, "WERTE", series_name = "Import",    unit = "Mrd. EUR", geo = "HH", class_filters = cf,  scale = 1 / 1e6)
-  tex <- .parse_or_empty(transport_raw, "WERTA", series_name = "TransportExport", unit = "Mrd. EUR", geo = "HH", class_filters = cft, scale = 1 / 1e6)
-  tim <- .parse_or_empty(transport_raw, "WERTE", series_name = "TransportImport", unit = "Mrd. EUR", geo = "HH", class_filters = cft, scale = 1 / 1e6)
+  aex <- .parse_or_empty(air_raw, "WERTA", series_name = "AirExport", unit = "Mrd. EUR", geo = "HH", class_filters = cfa, scale = 1 / 1e6)
+  aim <- .parse_or_empty(air_raw, "WERTE", series_name = "AirImport", unit = "Mrd. EUR", geo = "HH", class_filters = cfa, scale = 1 / 1e6)
   ex_j <- dplyr::left_join(dplyr::rename(ex, Export = value),
-                            dplyr::rename(tex, TransportExport = value), by = "date") |>
-    dplyr::mutate(ExportExclTransport = Export - dplyr::coalesce(TransportExport, 0))
+                            dplyr::rename(aex, AirExport = value), by = "date") |>
+    dplyr::mutate(ExportNoAir = Export - AirExport)
   im_j <- dplyr::left_join(dplyr::rename(im, Import = value),
-                            dplyr::rename(tim, TransportImport = value), by = "date") |>
-    dplyr::mutate(ImportExclTransport = Import - dplyr::coalesce(TransportImport, 0))
+                            dplyr::rename(aim, AirImport = value), by = "date") |>
+    dplyr::mutate(ImportNoAir = Import - AirImport)
   dplyr::bind_rows(
     dplyr::transmute(ex_j, date, value = Export, series = "Export", unit = "Mrd. EUR", geo = "HH"),
-    dplyr::transmute(ex_j, date, value = ExportExclTransport, series = "ExportExclTransport", unit = "Mrd. EUR", geo = "HH"),
+    dplyr::transmute(ex_j, date, value = ExportNoAir, series = "ExportNoAir", unit = "Mrd. EUR", geo = "HH"),
     dplyr::transmute(im_j, date, value = Import, series = "Import", unit = "Mrd. EUR", geo = "HH"),
-    dplyr::transmute(im_j, date, value = ImportExclTransport, series = "ImportExclTransport", unit = "Mrd. EUR", geo = "HH")
+    dplyr::transmute(im_j, date, value = ImportNoAir, series = "ImportNoAir", unit = "Mrd. EUR", geo = "HH")
   )
 }
 
@@ -389,8 +389,14 @@ fetch_state_deviation <- function(yr, state_key, direction = "export") {
 }
 
 fetch_ger_cpi_yoy <- function(series_name = "inflation_rate") {
-  raw <- with_cache(paste0("genesis_61111-0002_", DATA_START_YEAR),
-                   genesis_fetch("61111-0002"))
+  custom_start <- !is.null(getOption("hwwi.start.year"))
+  fetch_start <- if (custom_start) DATA_START_YEAR - 1L else DATA_START_YEAR
+  cache_key <- if (custom_start) {
+    paste0("genesis_61111-0002_yoy_preroll_", DATA_START_YEAR)
+  } else {
+    paste0("genesis_61111-0002_", DATA_START_YEAR)
+  }
+  raw <- with_cache(cache_key, genesis_fetch("61111-0002", start_year = fetch_start))
   parse_genesis(raw, value_var = "PREIS1", unit_filter = "2020=100",
                 series_name = series_name, geo = "DEU") |>
     dplyr::arrange(date) |>

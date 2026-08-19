@@ -1,5 +1,6 @@
 # ── Data ──────────────────────────────────────────────────────────────────────
 DATA_START_YEAR <- 2000   # earliest year to fetch for all time series
+HH_AIRCRAFT_ARCHIVE_START_YEAR <- 2000  # stable cache key for retired EGW883 history
 
 # World Bank aggregate regions used by both regional GDP graph modules. Keep
 # these in shared configuration because graph discovery sources each module in

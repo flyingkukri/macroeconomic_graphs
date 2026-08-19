@@ -1,5 +1,4 @@
-plot_pie <- function(dat, group_col = "Group", value_col = "GerExport",
-                      caption = "", big_mark = ".", decimal_mark = ",",
+plot_pie <- function(dat, caption = "", big_mark = ".", decimal_mark = ",",
                       colors = NULL,
                       n_inside    = 1,        # largest n slices get white interior labels
                       inside_x    = 1.8,      # x position for inside labels
@@ -9,10 +8,10 @@ plot_pie <- function(dat, group_col = "Group", value_col = "GerExport",
                       plot_margin = ggplot2::margin(-70, 200, -20, -20)) {
 
   dat <- dat |>
-    dplyr::arrange(.data[[value_col]]) |>
+    dplyr::arrange(value) |>
     dplyr::mutate(
-      pct  = .data[[value_col]] / sum(.data[[value_col]], na.rm = TRUE) * 100,
-      ymax = cumsum(.data[[value_col]]),
+      pct  = value / sum(value, na.rm = TRUE) * 100,
+      ymax = cumsum(value),
       ymin = dplyr::lag(ymax, default = 0),
       mid  = (ymax + ymin) / 2
     )
@@ -27,8 +26,9 @@ plot_pie <- function(dat, group_col = "Group", value_col = "GerExport",
   dat <- dat |>
     dplyr::mutate(
       label = paste0(
-        .data[[group_col]], "\n",
-        formatC(.data[[value_col]], big.mark = big_mark, format = "f", digits = 3),
+        series, "\n",
+        formatC(value, big.mark = big_mark, decimal.mark = decimal_mark,
+                format = "f", digits = 3),
         " Mrd.€ (", formatC(pct, format = "f", decimal.mark = decimal_mark, digits = 2), " %)"
       ),
       is_inside   = dplyr::row_number() > (dplyr::n() - n_inside),

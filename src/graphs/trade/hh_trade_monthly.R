@@ -1,12 +1,12 @@
-# Hamburg monthly trade bar charts: total vs. excl. other transport equipment.
+# Hamburg monthly trade bar charts: total vs. excl. aircraft.
 # Source: fetch_hh_trade_monthly() (tables 51000-0031/0035).
 
 .hh_trade_bar <- function(direction, y_axis, caption, labels,
                             decimal_mark, big_mark, y_limits,
                             start_date = NULL, x_breaks = "2 years") {
-  series_pair <- c(direction, paste0(direction, "ExclTransport"))
-  dat <- with_cache(paste0("genesis_hh_trade_monthly_gp26_", DATA_START_YEAR),
-                    fetch_hh_trade_monthly()) |>
+  series_pair <- c(direction, paste0(direction, "NoAir"))
+  dat <- with_cache(paste0("genesis_hh_trade_monthly_", HH_AIRCRAFT_ARCHIVE_START_YEAR),
+                    fetch_hh_trade_monthly(HH_AIRCRAFT_ARCHIVE_START_YEAR)) |>
     dplyr::filter(series %in% series_pair) |>
     dplyr::mutate(series = factor(series, levels = series_pair))
   if (!is.null(start_date))
@@ -42,10 +42,10 @@ list(id = "trade_hh_export_pandemic", category = "Trade", label = "Hamburg Month
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_export_pandemic("Exporte (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamtexporte", "Exporte ohne sonstigen Fahrzeugbau"), decimal_mark = ",",
+            labels = c("Gesamtexporte", "Exporte ohne Luft- und Raumfahrzeuge"), decimal_mark = ",",
             big_mark = "."), "Hamburg Total Exports since Pandemic_ger", GER)
         render_graph(hh_export_pandemic("Exports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Exports", "Exports excl. other transport equipment"), decimal_mark = ".", big_mark = ","),
+            labels = c("Total Exports", "Exports excl. Aircraft"), decimal_mark = ".", big_mark = ","),
             "Hamburg Total Exports since Pandemic_en", EN)
     }),
 list(id = "trade_hh_import_pandemic", category = "Trade", label = "Hamburg Monthly Imports since COVID-19 Pandemic",
@@ -53,32 +53,32 @@ list(id = "trade_hh_import_pandemic", category = "Trade", label = "Hamburg Month
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_import_pandemic("Einfuhren (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamteinfuhren", "Einfuhren ohne sonstigen Fahrzeugbau"), decimal_mark = ",",
+            labels = c("Gesamteinfuhren", "Einfuhren ohne Luft- und Raumfahrzeuge"), decimal_mark = ",",
             big_mark = "."), "Hamburg Total Imports since Pandemic_ger", GER)
         render_graph(hh_import_pandemic("Imports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Imports", "Imports excl. other transport equipment"), decimal_mark = ".", big_mark = ","),
+            labels = c("Total Imports", "Imports excl. Aircraft"), decimal_mark = ".", big_mark = ","),
             "Hamburg Total Imports since Pandemic_en", EN)
     }),
-list(id = "hh_export_monthly", category = "Trade", label = "Hamburg Monthly Exports (total/excl. other transport equipment)",
+list(id = "hh_export_monthly", category = "Trade", label = "Hamburg Monthly Exports (total/excl. aircraft)",
     render = function() {
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_export_monthly("Exporte (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamtexporte", "Exporte ohne sonstigen Fahrzeugbau"), decimal_mark = ","),
+            labels = c("Gesamtexporte", "Exporte ohne Luft- und Raumfahrzeuge"), decimal_mark = ","),
             "HH Export - value_ger", GER)
         render_graph(hh_export_monthly("Exports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Exports", "Exports excl. other transport equipment"), decimal_mark = "."), "HH Export - value_en",
+            labels = c("Total Exports", "Exports excl. Aircraft"), decimal_mark = ".", big_mark = ","), "HH Export - value_en",
             EN)
     }),
-list(id = "hh_import_monthly", category = "Trade", label = "Hamburg Monthly Imports (total/excl. other transport equipment)",
+list(id = "hh_import_monthly", category = "Trade", label = "Hamburg Monthly Imports (total/excl. aircraft)",
     render = function() {
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_import_monthly("Importe (in Mrd. EUR)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamteinfuhren", "Einfuhren ohne sonstigen Fahrzeugbau"), decimal_mark = ","),
+            labels = c("Gesamteinfuhren", "Einfuhren ohne Luft- und Raumfahrzeuge"), decimal_mark = ","),
             "HH Import - value_ger", GER)
         render_graph(hh_import_monthly("Imports (in Billion EUR)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Imports", "Imports excl. other transport equipment"), decimal_mark = "."), "HH Import - value_en",
+            labels = c("Total Imports", "Imports excl. Aircraft"), decimal_mark = ".", big_mark = ","), "HH Import - value_en",
             EN)
     })
 )

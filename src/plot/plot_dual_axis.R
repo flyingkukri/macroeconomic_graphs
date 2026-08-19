@@ -35,7 +35,7 @@ plot_dual_axis <- function(dat, caption,
     ggplot2::geom_line(linewidth = 1.8) +
     ggplot2::scale_color_manual(
       values = setNames(colors, c(series_left, series_right)),
-      guide  = ggplot2::guide_legend(title = "", ncol = 1)
+      guide  = ggplot2::guide_legend(title = "")
     ) +
     ggplot2::scale_x_date(date_breaks = x_breaks, date_labels = "%Y") +
     ggplot2::scale_y_continuous(

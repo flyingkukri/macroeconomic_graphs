@@ -1,10 +1,10 @@
-# Hamburg monthly trade YoY change (%), total vs. excl. other transport equipment.
+# Hamburg monthly trade YoY change (%), total vs. excl. aircraft.
 # YoY = current month vs. same month prior year (lag 12). Source: 51000-0031/0035.
 
-.hh_trade_yoy <- function(direction, y_axis, caption, labels, decimal_mark, y_limits) {
-  series_pair <- c(direction, paste0(direction, "ExclTransport"))
-  dat <- with_cache(paste0("genesis_hh_trade_monthly_gp26_", DATA_START_YEAR),
-                    fetch_hh_trade_monthly()) |>
+.hh_trade_yoy <- function(direction, y_axis, caption, labels, decimal_mark, big_mark, y_limits) {
+  series_pair <- c(direction, paste0(direction, "NoAir"))
+  dat <- with_cache(paste0("genesis_hh_trade_monthly_", HH_AIRCRAFT_ARCHIVE_START_YEAR),
+                    fetch_hh_trade_monthly(HH_AIRCRAFT_ARCHIVE_START_YEAR)) |>
     dplyr::filter(series %in% series_pair) |>
     dplyr::arrange(series, date) |>
     dplyr::group_by(series) |>
@@ -12,17 +12,17 @@
     dplyr::ungroup() |>
     dplyr::filter(!is.na(value), date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   plot_timeseries_multi(dat, y_axis = y_axis, caption = caption, labels = labels,
-                         decimal_mark = decimal_mark, x_breaks = "2 years",
+                         decimal_mark = decimal_mark, big_mark = big_mark, x_breaks = "2 years",
                          y_limits = y_limits)
 }
 
 hh_export_yoy_change <- function(y_axis, caption, labels,
-                                  decimal_mark = ",", y_limits = NULL)
-  .hh_trade_yoy("Export", y_axis, caption, labels, decimal_mark, y_limits)
+                                  decimal_mark = ",", big_mark = ".", y_limits = NULL)
+  .hh_trade_yoy("Export", y_axis, caption, labels, decimal_mark, big_mark, y_limits)
 
 hh_import_yoy_change <- function(y_axis, caption, labels,
-                                  decimal_mark = ",", y_limits = NULL)
-  .hh_trade_yoy("Import", y_axis, caption, labels, decimal_mark, y_limits)
+                                  decimal_mark = ",", big_mark = ".", y_limits = NULL)
+  .hh_trade_yoy("Import", y_axis, caption, labels, decimal_mark, big_mark, y_limits)
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────
 # Metadata and rendering live with the implementation so discovery needs no central registry.
@@ -32,10 +32,10 @@ list(id = "trade_hh_export_yoy_change", category = "Trade", label = "Hamburg Mon
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_export_yoy_change("Veränderung gg. Vorjahr (in %)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamtexporte", "Exporte ohne sonstigen Fahrzeugbau")), "Hamburg Monthly Exports YoY Change_ger",
+            labels = c("Gesamtexporte", "Exporte ohne Luft- und Raumfahrzeuge")), "Hamburg Monthly Exports YoY Change_ger",
             GER)
         render_graph(hh_export_yoy_change("Change vs. prev. year (in %)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Exports", "Exports excl. other transport equipment"), decimal_mark = "."), "Hamburg Monthly Exports YoY Change_en",
+            labels = c("Total Exports", "Exports excl. Aircraft"), decimal_mark = ".", big_mark = ","), "Hamburg Monthly Exports YoY Change_en",
             EN)
     }),
 list(id = "trade_hh_import_yoy_change", category = "Trade", label = "Hamburg Monthly Imports: Year-on-Year Change",
@@ -43,10 +43,10 @@ list(id = "trade_hh_import_yoy_change", category = "Trade", label = "Hamburg Mon
         GER <- file.path(OUT_DIR, "trade graphs/German labeling")
         EN <- file.path(OUT_DIR, "trade graphs/English labeling")
         render_graph(hh_import_yoy_change("Veränderung gg. Vorjahr (in %)", "Datenquelle: Statistisches Bundesamt (Destatis)",
-            labels = c("Gesamteinfuhren", "Einfuhren ohne sonstigen Fahrzeugbau")), "Hamburg Monthly Imports YoY Change_ger",
+            labels = c("Gesamteinfuhren", "Einfuhren ohne Luft- und Raumfahrzeuge")), "Hamburg Monthly Imports YoY Change_ger",
             GER)
         render_graph(hh_import_yoy_change("Change vs. prev. year (in %)", "Data source: Federal statistical office (Destatis)",
-            labels = c("Total Imports", "Imports excl. other transport equipment"), decimal_mark = "."), "Hamburg Monthly Imports YoY Change_en",
+            labels = c("Total Imports", "Imports excl. Aircraft"), decimal_mark = ".", big_mark = ","), "Hamburg Monthly Imports YoY Change_en",
             EN)
     })
 )

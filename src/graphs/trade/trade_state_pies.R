@@ -1,6 +1,16 @@
 # Pie charts for trade structure by commodity group (top 10 + rest).
 # Hamburg/LS from GENESIS 51000-0034; Germany from 51000-0005.
 
+.as_trade_pie_tibble <- function(dat, value_col, year, geo) {
+  tibble::tibble(
+    date = as.Date(paste0(year, "-01-01")),
+    value = as.numeric(dat[[value_col]]),
+    series = as.character(dat$Group),
+    unit = "Mrd. EUR",
+    geo = geo
+  )
+}
+
 .state_pie <- function(state_key, state_label, direction,
                         caption, big_mark, decimal_mark, n_inside, start_angle) {
   year <- as.integer(format(Sys.Date(), "%Y")) - 1
@@ -11,7 +21,8 @@
     data.frame("Sonstige", sum(raw[[direction]][11:nrow(raw)], na.rm = TRUE)),
     c("Group", direction)
   )
-  plot_pie(rbind(top, rest), group_col = "Group", value_col = direction,
+  dat <- .as_trade_pie_tibble(rbind(top, rest), direction, year, state_label)
+  plot_pie(dat,
             caption = caption, big_mark = big_mark, decimal_mark = decimal_mark,
             n_inside = n_inside, text_size = 2.4,
             start_angle = start_angle, x_limit = 4.75,
@@ -40,7 +51,8 @@ trade_export_germany_pie <- function(caption, big_mark = ".", decimal_mark = ","
   top  <- raw[1:10, c("Group", "GerExport")]
   rest <- data.frame(Group = "Sonstige",
                      GerExport = sum(raw$GerExport[11:nrow(raw)], na.rm = TRUE))
-  plot_pie(rbind(top, rest), group_col = "Group", value_col = "GerExport",
+  dat <- .as_trade_pie_tibble(rbind(top, rest), "GerExport", year, "DEU")
+  plot_pie(dat,
             caption = caption, big_mark = big_mark, decimal_mark = decimal_mark,
             n_inside = 1, inside_x = 2)
 }
@@ -51,7 +63,8 @@ trade_import_germany_pie <- function(caption, big_mark = ".", decimal_mark = ","
   top  <- raw[1:10, c("Group", "GerImport")]
   rest <- data.frame(Group     = "Sonstige",
                      GerImport = sum(raw$GerImport[11:nrow(raw)], na.rm = TRUE))
-  plot_pie(rbind(top, rest), group_col = "Group", value_col = "GerImport",
+  dat <- .as_trade_pie_tibble(rbind(top, rest), "GerImport", year, "DEU")
+  plot_pie(dat,
             caption = caption, big_mark = big_mark, decimal_mark = decimal_mark,
             n_inside = 1, inside_x = 2)
 }

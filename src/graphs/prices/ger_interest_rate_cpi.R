@@ -1,4 +1,4 @@
-# Dual-axis: ECB deposit facility rate (left, %) and German CPI inflation rate (right, %).
+# ECB deposit facility rate and German CPI inflation rate on one shared percentage axis.
 # ECB rate fetched from FRED public CSV (ECBDFR series, daily → monthly average).
 # Inflation from Destatis GENESIS table 61111-0002 (monthly YoY CPI change).
 
@@ -30,9 +30,9 @@
 ger_interest_rate_cpi <- function(caption,
                                    label_rate       = "EZB-Einlagenzins",
                                    label_inflation  = "Inflationsrate",
-                                   y_axis_left      = "EZB-Einlagenzins (in %)",
-                                   y_axis_right     = "Inflationsrate (in %)",
-                                   decimal_mark     = ",") {
+                                   y_axis           = "Zins- und Inflationsrate (in %)",
+                                   decimal_mark     = ",",
+                                   big_mark         = ".") {
   ecb <- with_cache(paste0("ecb_deposit_rate_", DATA_START_YEAR),
                     .fetch_ecb_deposit_rate(DATA_START_YEAR)) |>
     dplyr::mutate(series = label_rate)
@@ -40,13 +40,15 @@ ger_interest_rate_cpi <- function(caption,
   inflation <- fetch_ger_cpi_yoy(series_name = label_inflation)
 
   dat <- dplyr::bind_rows(ecb, inflation)
-  plot_dual_axis(dat, caption = caption,
-                  y_axis_left  = y_axis_left,
-                  y_axis_right = y_axis_right,
-                  series_left  = label_rate,
-                  series_right = label_inflation,
-                  decimal_mark = decimal_mark,
-                  x_breaks     = "2 years")
+  plot_timeseries_multi(
+    dat,
+    y_axis = y_axis,
+    caption = caption,
+    colors = c(hwwi_blue, hwwi_rubin),
+    decimal_mark = decimal_mark,
+    big_mark = big_mark,
+    x_breaks = "2 years"
+  )
 }
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────
@@ -57,12 +59,12 @@ list(id = "ger_interest_rate_cpi", category = "Prices", label = "Germany: ECB De
         GER <- file.path(OUT_DIR, "prices graphs/German labeling")
         EN <- file.path(OUT_DIR, "prices graphs/English labeling")
         render_graph(ger_interest_rate_cpi(caption = "Datenquelle: EZB / FRED, Statistisches Bundesamt (Destatis)",
-            label_rate = "EZB-Einlagenzins", label_inflation = "Inflationsrate", y_axis_left = "EZB-Einlagenzins (in %)",
-            y_axis_right = "Inflationsrate (in %)", decimal_mark = ","), "GER ECB rate and inflation_ger",
+            label_rate = "EZB-Einlagenzins", label_inflation = "Inflationsrate",
+            y_axis = "Zins- und Inflationsrate (in %)", decimal_mark = ","), "GER ECB rate and inflation_ger",
             GER)
         render_graph(ger_interest_rate_cpi(caption = "Data source: ECB / FRED, Federal statistical office (Destatis)",
-            label_rate = "ECB deposit rate", label_inflation = "Inflation rate", y_axis_left = "ECB deposit rate (in %)",
-            y_axis_right = "Inflation rate (in %)", decimal_mark = "."), "GER ECB rate and inflation_en",
+            label_rate = "ECB deposit rate", label_inflation = "Inflation rate",
+            y_axis = "Interest and inflation rate (in %)", decimal_mark = ".", big_mark = ","), "GER ECB rate and inflation_en",
             EN)
     })
 )

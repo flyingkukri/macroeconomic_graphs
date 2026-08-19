@@ -1,11 +1,12 @@
 .choropleth_world_theme <- function() {
   ggplot2::theme(
-    legend.position      = c(0.02, 0.02),
-    legend.justification = c(0, 0),
-    legend.key.height    = ggplot2::unit(1.5, "cm"),
+    legend.position      = "bottom",
+    legend.justification = "center",
+    legend.direction     = "horizontal",
+    legend.key.height    = grid::unit(0.45, "cm"),
     legend.text          = ggplot2::element_text(size = 9),
     legend.title         = ggplot2::element_text(size = 10, colour = hwwi_dark_grey, face = "bold"),
-    legend.background    = ggplot2::element_rect(fill = "white", colour = NA),
+    legend.background    = ggplot2::element_blank(),
     plot.caption         = ggplot2::element_text(hjust = 0, margin = ggplot2::margin(t = 10))
   )
 }
@@ -13,16 +14,31 @@
 plot_choropleth_world <- function(dat, fill_col = "value", legend_title = "",
                                    caption = "", low = "white", high = hwwi_blue,
                                    xlim = c(-179, 179), ylim = c(-56, 85)) {
+  # Some GENESIS country tables include a monetary observation and a tiny
+  # auxiliary observation under the same country code. Choropleths need one
+  # non-negative trade value per country; retain the monetary (largest) value.
+  map_dat <- dat |>
+    dplyr::filter(!is.na(geo), is.finite(.data[[fill_col]]), .data[[fill_col]] >= 0) |>
+    dplyr::group_by(geo) |>
+    dplyr::summarise(.map_value = max(.data[[fill_col]]), .groups = "drop")
+
   world  <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
-  dat_sf <- dplyr::left_join(world, dat, by = c("iso_a3_eh" = "geo")) |> sf::st_as_sf()
-  fill_max <- max(dat[[fill_col]], na.rm = TRUE)
+  dat_sf <- dplyr::left_join(world, map_dat, by = c("iso_a3_eh" = "geo")) |> sf::st_as_sf()
+  fill_max <- max(map_dat$.map_value, na.rm = TRUE)
 
   ggplot2::ggplot() +
-    ggplot2::geom_sf(data = dat_sf, ggplot2::aes(fill = .data[[fill_col]]),
+    ggplot2::geom_sf(data = dat_sf, ggplot2::aes(fill = .map_value),
                      na.rm = TRUE, colour = NA) +
     ggplot2::geom_sf(data = world, fill = NA, linewidth = 0.2, colour = "grey70") +
     ggplot2::scale_fill_gradient(low = low, high = high, na.value = "grey88",
-                                  trans = "sqrt", limits = c(0, fill_max)) +
+                                  trans = "sqrt", limits = c(0, fill_max),
+                                  breaks = scales::breaks_pretty(n = 4),
+                                  guide = ggplot2::guide_colorbar(
+                                    direction = "horizontal",
+                                    title.position = "top",
+                                    barwidth = grid::unit(10, "cm"),
+                                    barheight = grid::unit(0.45, "cm")
+                                  )) +
     ggplot2::coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
     ggplot2::labs(fill = legend_title, caption = paste0(caption, " ", format(Sys.Date(), "%Y"))) +
     hwwi_theme(no_axes = TRUE) +
@@ -41,7 +57,14 @@ plot_choropleth_world_div <- function(dat, fill_col = "value", legend_title = ""
     ggplot2::geom_sf(data = world, fill = NA, linewidth = 0.2, colour = "grey70") +
     ggplot2::scale_fill_gradient2(low = hwwi_rubin, mid = "white", high = hwwi_blue,
                                    midpoint = 0, na.value = "grey88",
-                                   limits = c(-abs_max, abs_max)) +
+                                   limits = c(-abs_max, abs_max),
+                                   breaks = scales::breaks_pretty(n = 4),
+                                   guide = ggplot2::guide_colorbar(
+                                     direction = "horizontal",
+                                     title.position = "top",
+                                     barwidth = grid::unit(10, "cm"),
+                                     barheight = grid::unit(0.45, "cm")
+                                   )) +
     ggplot2::coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
     ggplot2::labs(fill = legend_title, caption = paste0(caption, " ", format(Sys.Date(), "%Y"))) +
     hwwi_theme(no_axes = TRUE) +

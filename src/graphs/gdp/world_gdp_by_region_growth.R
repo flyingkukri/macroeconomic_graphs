@@ -42,13 +42,23 @@ gdp_world_by_region_growth <- function(y_axis, caption, labels = NULL,
       values = bar_colors,
       guide  = ggplot2::guide_legend(title = "")
     ) +
+    ggplot2::scale_x_discrete(
+      labels = function(x) stringr::str_wrap(x, width = 16)
+    ) +
     ggplot2::scale_y_continuous(
       breaks = seq(y_min, y_max, by = 1),
       labels = function(x) paste0(format(x, decimal.mark = decimal_mark, scientific = FALSE), "%")
     ) +
     ggplot2::labs(x = "", y = y_axis, caption = caption) +
     hwwi_theme() +
-    ggplot2::theme(legend.position = "bottom")
+    ggplot2::theme(
+      legend.position = "bottom",
+      axis.text.x = ggplot2::element_text(
+        size = 10,
+        lineheight = 0.9,
+        margin = ggplot2::margin(t = 8)
+      )
+    )
 }
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────

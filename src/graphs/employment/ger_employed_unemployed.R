@@ -1,7 +1,7 @@
 # Dual Y-axis: employed (left, Mio.) and registered unemployed (right, Mio.), annual.
 # Sources: Erwerbstätige from 81000-0015 (ETR/VGR, Inlandskonzept);
 #          Arbeitslose from 13211-0001 (BA registered, Insgesamt).
-# Start from 1991 to match reference (reunified Germany historical series).
+# The complete 1991 archives are reused; displayed history follows DATA_START_YEAR.
 ger_employed_unemployed <- function(caption,
                                      label_employed   = "Erwerbstätige",
                                      label_unemployed = "Arbeitslose",
@@ -19,14 +19,14 @@ ger_employed_unemployed <- function(caption,
                              series_name   = label_employed,
                              geo           = "DEU",
                              scale         = 1 / 1e3) |>
-    dplyr::filter(date >= as.Date("1991-01-01"))
+    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   unemployed <- parse_genesis(raw_unemp,
                                value_var     = "ERW006",
                                class_filters = list("1_variable_attribute_code" = NA_character_),
                                series_name   = label_unemployed,
                                geo           = "DEU",
                                scale         = 1 / 1e6) |>
-    dplyr::filter(date >= as.Date("1991-01-01"))
+    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
   dat <- dplyr::bind_rows(employed, unemployed)
   plot_dual_axis(dat, caption = caption,
                   y_axis_left  = y_axis_left,

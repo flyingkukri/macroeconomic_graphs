@@ -3,8 +3,14 @@
 .ger_trade_yoy <- function(value_var, series_name, y_axis, caption, decimal_mark,
                              show_trend = FALSE, x_breaks = "2 years",
                              start_date = as.Date(paste0(DATA_START_YEAR, "-01-01"))) {
-  raw <- with_cache(paste0("genesis_51000-0002_", DATA_START_YEAR),
-                    genesis_fetch("51000-0002"))
+  custom_start <- !is.null(getOption("hwwi.start.year"))
+  fetch_start <- if (custom_start) DATA_START_YEAR - 1L else DATA_START_YEAR
+  cache_key <- if (custom_start) {
+    paste0("genesis_51000-0002_yoy_preroll_", DATA_START_YEAR)
+  } else {
+    paste0("genesis_51000-0002_", DATA_START_YEAR)
+  }
+  raw <- with_cache(cache_key, genesis_fetch("51000-0002", start_year = fetch_start))
   dat <- parse_genesis(raw, value_var = value_var, series_name = series_name,
                         geo = "DEU", scale = 1 / 1e6) |>
     dplyr::arrange(date) |>
@@ -33,7 +39,7 @@ ger_export_yoy_change <- function(y_axis, caption, decimal_mark = ",")
   .ger_trade_yoy("WERTA", "export_yoy", y_axis, caption, decimal_mark,
                  show_trend  = TRUE,
                  x_breaks    = "1 year",
-                 start_date  = as.Date("2020-01-01"))
+                 start_date  = as.Date(paste0(DATA_START_YEAR, "-01-01")))
 
 ger_import_yoy_change <- function(y_axis, caption, decimal_mark = ",")
   .ger_trade_yoy("WERTE", "import_yoy", y_axis, caption, decimal_mark)

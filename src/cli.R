@@ -59,6 +59,7 @@ source("src/bootstrap.R")
 
 if (!is.null(.custom_start_year)) {
   DATA_START_YEAR <- .custom_start_year
+  options(hwwi.start.year = .custom_start_year)
   OUT_DIR <- file.path(OUT_DIR, paste0("custom start ", .custom_start_year))
   cat("Custom start year:", .custom_start_year, "\n")
 }

@@ -7,9 +7,16 @@
                                   positive_label, negative_label, decimal_mark) {
   yr   <- if (is.null(year)) as.integer(format(Sys.Date(), "%Y")) - 1 else as.integer(year)
   comp <- fetch_state_deviation(yr, state_key = state_key, direction = direction)
-  comp <- comp[order(-comp$diff), ]
+  comp <- tibble::tibble(
+    date = as.Date(paste0(yr, "-01-01")),
+    value = comp$diff,
+    series = comp$Group,
+    unit = "percentage points",
+    geo = state_key
+  )
+  comp <- comp[order(-comp$value), ]
   comp <- rbind(head(comp, 5), tail(comp, 5))
-  plot_bar_deviation(comp, caption = caption, label_col = "Group", value_col = "diff",
+  plot_bar_deviation(comp, caption = caption,
                       x_axis = if (decimal_mark == ",") "Prozentpunkte" else "Percentage points",
                       decimal_mark = decimal_mark,
                       positive_label = positive_label, negative_label = negative_label)
@@ -22,10 +29,13 @@
                     fetch_trade_share_deviation_by_country(yr, regional_key = state_key,
                                                             direction = direction))
   dat <- dat[!is.na(dat$value), ]
-  dat$Country <- countrycode::countrycode(dat$geo, "iso3c", "country.name", warn = FALSE)
-  dat <- dat[!is.na(dat$Country), ]
+  dat$series <- countrycode::countrycode(dat$geo, "iso3c", "country.name", warn = FALSE)
+  dat <- dat[!is.na(dat$series), ]
+  dat$date <- as.Date(paste0(yr, "-01-01"))
+  dat$unit <- "percentage points"
+  dat <- dplyr::select(dat, date, value, series, unit, geo)
   comp <- rbind(head(dat[order(-dat$value), ], 5), tail(dat[order(-dat$value), ], 5))
-  plot_bar_deviation(comp, caption = caption, label_col = "Country", value_col = "value",
+  plot_bar_deviation(comp, caption = caption,
                       x_axis = if (decimal_mark == ",") "Prozentpunkte" else "Percentage points",
                       decimal_mark = decimal_mark,
                       positive_label = positive_label, negative_label = negative_label)

@@ -5,6 +5,29 @@
   NA_character_
 }
 
+.filter_frame_from_year <- function(dat, start_year) {
+  if (!is.data.frame(dat) || !"date" %in% names(dat)) return(dat)
+  if (!inherits(dat$date, c("Date", "POSIXct", "POSIXt"))) return(dat)
+
+  cutoff <- as.Date(sprintf("%d-01-01", start_year))
+  keep <- is.na(dat$date) | as.Date(dat$date) >= cutoff
+  dat[keep, , drop = FALSE]
+}
+
+# Enforce --start-year at the final rendering boundary. Most graph modules
+# already filter their source data, but this also covers older modules with a
+# hard-coded historical start and custom plots that keep data on their layers.
+.apply_render_start_year <- function(plot) {
+  start_year <- getOption("hwwi.start.year")
+  if (is.null(start_year) || !inherits(plot, "ggplot")) return(plot)
+
+  plot$data <- .filter_frame_from_year(plot$data, start_year)
+  for (i in seq_along(plot$layers)) {
+    plot$layers[[i]]$data <- .filter_frame_from_year(plot$layers[[i]]$data, start_year)
+  }
+  plot
+}
+
 render_graph <- function(plot, title, out_dir, format = OUT_FORMAT,
                          width = OUT_WIDTH, height = OUT_HEIGHT, dpi = OUT_DPI) {
   requested_language <- getOption("hwwi.render.language")
@@ -19,6 +42,8 @@ render_graph <- function(plot, title, out_dir, format = OUT_FORMAT,
 
   output_override <- getOption("hwwi.output.dir")
   if (!is.null(output_override)) out_dir <- output_override
+
+  plot <- .apply_render_start_year(plot)
 
   dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
   path <- file.path(out_dir, paste0(title, ".", format))

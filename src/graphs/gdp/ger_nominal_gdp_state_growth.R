@@ -31,6 +31,7 @@
     dplyr::group_by(geo) |>
     dplyr::group_modify(~ yoy_growth(.x, value_col = "value")) |>
     dplyr::ungroup() |>
+    dplyr::mutate(unit = "%") |>
     dplyr::filter(!is.na(value), date == max(date)) |>
     dplyr::arrange(value)
 }
@@ -42,8 +43,8 @@
 #' growth rate for the same year, as horizontal ranking bars.
 ger_nominal_gdp_state_growth <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
   dat <- .ger_gdp_state_growth_helper()
-  plot_bar_ranking(dat, caption = caption, label_col = "geo", value_col = "value",
-                    x_axis = y_axis, decimal_mark = decimal_mark, big_mark = big_mark)
+  plot_bar_ranking(dat, caption = caption, x_axis = y_axis,
+                    decimal_mark = decimal_mark, big_mark = big_mark)
 }
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────

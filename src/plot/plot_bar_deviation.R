@@ -1,19 +1,17 @@
 plot_bar_deviation <- function(dat, caption,
-                                label_col       = "Group",
-                                value_col       = "diff",
                                 x_axis          = "",
                                 decimal_mark    = ".",
                                 big_mark        = ",",
                                 positive_label  = "Above average",
                                 negative_label  = "Below average",
                                 colors          = c(hwwi_blue, hwwi_rubin)) {
-  dat <- dat[order(dat[[value_col]]), ]
-  dat[[label_col]] <- factor(dat[[label_col]], levels = dat[[label_col]])
-  dat$direction <- ifelse(dat[[value_col]] >= 0, positive_label, negative_label)
+  dat <- dat[order(dat$value), ]
+  dat$series <- factor(dat$series, levels = unique(dat$series))
+  dat$direction <- ifelse(dat$value >= 0, positive_label, negative_label)
   dat$direction <- factor(dat$direction, levels = c(positive_label, negative_label))
 
-  ggplot2::ggplot(dat, ggplot2::aes(x = .data[[value_col]],
-                                     y = .data[[label_col]],
+  ggplot2::ggplot(dat, ggplot2::aes(x = value,
+                                     y = series,
                                      fill = direction)) +
     ggplot2::geom_col() +
     ggplot2::geom_vline(xintercept = 0, linewidth = 0.5, color = "grey40") +

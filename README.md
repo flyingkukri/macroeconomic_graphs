@@ -1,39 +1,40 @@
 ## Requirements
 Most R package dependencies are installed automatically on first run via `pacman::p_load` (see [src/theme.R](src/theme.R)): `tidyverse`, `sf`, `ggplot2`, `extrafont`, `patchwork`, `countrycode`, `scales`, `ggrepel`, `ggnewscale`, `rnaturalearth`, `rnaturalearthdata`, `WDI`, `readxl`, `httr`, `jsonlite`, and `xml2`.
 
+`restatis` and `httr2` are loaded by [src/bootstrap.R](src/bootstrap.R). The `seasonal` package is required by graphs that perform X-13ARIMA-SEATS adjustment locally.
+
 Install the packages loaded or used outside that automatic list before the first run:
 
 ```r
 install.packages(c("restatis", "httr2", "seasonal"))
 ```
 
-`restatis` and `httr2` are loaded by [src/bootstrap.R](src/bootstrap.R). The `seasonal` package is required by graphs that perform X-13ARIMA-SEATS adjustment locally.
-
-## Configuration
+## Log In
 
 GENESIS graphs require credentials configured once when first using the project.
 
-Either use a GENESIS API token:
+The preferred method is using a token. You can get a token from the [GENESIS website](https://genesis.destatis.de/datenbank/online/).
+![Follow these instructions to get a token](doc/genesis%20token.png)
 
+Then run the following in R:
 ```r
 restatis::gen_auth_save("genesis", use_token = TRUE)
 ```
+![console](doc/console.png)
 
-Enter the token when prompted. It is available after logging into the GENESIS website under **Webservice (API)** / **Webservice-Schnittstelle (API)**. For username/password authentication instead, run:
+Enter the token when prompted. 
 
+![token](doc/token.png)
+
+If, instead , you want to authenticate with your username and password, run the following in R:
 ```r
 restatis::gen_auth_save("genesis")
 ```
 
-`restatis` encrypts the credential in its user-level configuration directory and prints a generated `GENESIS_KEY`. Add that key to your personal `.Renviron`, as instructed by `restatis`, so later R sessions can decrypt the credential. Neither the credential nor `GENESIS_KEY` should be committed; `.Renviron` and local credential files are ignored by this repository.
-
-Zensus 2022 can be configured in the same way by replacing `"genesis"` with `"zensus"`; its encryption key is named `ZENSUS_KEY`.
-
-API-token authentication cannot create GENESIS jobs. The current project does not request jobs, so tokens work for its existing graphs. If a future call uses `restatis::gen_table(..., job = TRUE)`, configure username/password authentication with `use_token = FALSE` instead.
-
+Zensus 2022 can be configured in the same way by replacing `"genesis"` with `"zensus"`.
 ## Usage
-
-Run everything from the project root.
+Run one of the following commands in the project terminal to generate graphs.
+![example](doc/terminal.png) 
 
 ```bash
 # Interactive menu — lists all graphs by category, prompts for a selection
