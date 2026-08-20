@@ -10,7 +10,7 @@ The code specification is divided into three stages:
 
 For each stage, this library includes predefined helper functions to simplify the flow. 
 First, in the next subsection, we explain the fundamental data type of this project.
-Then, in Section 0 will show an example graph and explain the components, while the latter sections serve as a reference for the helper functions for each part of the plot generation.
+Then, in Section 0, we show a small real example that uses one of the plot helpers; the later sections serve as a reference for the helper functions behind the graph generation flow.
 
 ## The Data Tibble
 
@@ -25,75 +25,97 @@ For all plots that are based on time series, the `date` and `value` fields are n
 # Steps for Adding a Graph
 
 ## 0. Example Graph
+This is a simple real module from [src/graphs/gdp/ger_bip_annual.R](src/graphs/gdp/ger_bip_annual.R).
+
+The example shows the usual pattern: fetch, parse, plot, then register the graph in `.graph_specs`.
+
 ```r
-# Create a helper function that captures the graph logic
-.ger_gdp_state_growth_helper <- function() {
+# Fetch, parse, and plot a single series
+ger_bip_annual_growth <- function(y_axis, caption, decimal_mark = ",") {
   # 1. Fetch the raw data
-  raw <- with_cache(
-    paste0("genesis_82111-0010_", DATA_START_YEAR),     
-    genesis_fetch("82111-0010", start_year = DATA_START_YEAR)
+  raw <- with_cache(paste0("genesis_81000-0001_", DATA_START_YEAR),
+                    genesis_fetch("81000-0001"))
+
+  # 2. Parse the series you want to plot
+  dat <- parse_genesis(
+    raw,
+    value_var     = "BIP005",
+    class_filters = list("2_variable_attribute_code" = "VGRPKM"),
+    series_name   = "gdp_growth_annual",
+    geo           = "DEU"
   )
 
-  # 1.1 Extract the correct columns from the data
-  rows <- raw[
-    !is.na(raw$value_variable_code) & raw$value_variable_code == "BIP006" &
-      !is.na(raw$value) & !raw$value %in% c("-", "/", ".", "", "..."),
-    , drop = FALSE
-  ]
-  dat <- tibble::tibble(
-      date   = as.Date(paste0(rows$time, "-01-01")),
-      value  = as.numeric(gsub(",", ".", rows$value)),
-      series = "state_gdp_nominal",
-      unit   = "Mill. EUR",
-      geo    = rows[["1_variable_attribute_label"]]
-    )
-
-  # 2. Transform the data into yoy growth 
-  dat |>
-    dplyr::group_by(geo) |>
-    dplyr::group_modify(~ yoy_growth(.x, value_col = "value")) |>
-    dplyr::ungroup() |>
-    dplyr::mutate(unit = "%") |>
-    dplyr::filter(!is.na(value), date == max(date)) |>
-    dplyr::arrange(value)  # latest year's growth, one bar per state
+  # 3. Build the chart with a plot helper
+  plot_timeseries(dat, y_axis = y_axis, caption = caption,
+                  decimal_mark = decimal_mark, big_mark = ".")
 }
 
-# Return the final plot function. 
-ger_nominal_gdp_state_growth <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
-  dat <- .ger_gdp_state_growth_helper()
-  # 3. Choose the plot type
-  plot_bar_ranking(dat, caption = caption, x_axis = y_axis,
-                    decimal_mark = decimal_mark, big_mark = big_mark)
-}
-
-# 4. Add metadata for the graph.  
+# 4. Add graph metadata for discovery and rendering
 .graph_specs <- list(
-list(id = "ger_nominal_gdp_state_growth", category = "GDP", label = "Germany nominal GDP growth by state (YoY %, ranking)",
+  list(
+    id = "ger_bip_annual_growth",
+    category = "GDP",
+    label = "Germany Annual GDP Growth (Destatis)",
     render = function() {
-        GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
-        EN <- file.path(OUT_DIR, "GDP graphs/English labeling")
-        render_graph(ger_nominal_gdp_state_growth("Veränderung ggü. Vorjahr in %", "Datenquelle: Statistisches Bundesamt (Destatis)"),
-            "GER nominal GDP growth by state_ger", GER)
-        render_graph(ger_nominal_gdp_state_growth("YoY change in %", "Data source: Federal statistical office (Destatis)",
-            decimal_mark = ".", big_mark = ","), "GER nominal GDP growth by state_en", EN)
-    })
+      render_graph(
+        ger_bip_annual_growth(
+          "Kettenindex (2020=100)\nVeränderung in %",
+          "Datenquelle: Statistisches Bundesamt (Destatis)"
+        ),
+        "GER BIP annual growth - chain index_ger",
+        file.path(OUT_DIR, "GDP graphs/German labeling")
+      )
+    }
+  )
 )
 
-# Boilerplate code for debugging
+# Boilerplate for standalone execution and debugging
 if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
-auto_run_graph_file("src/graphs/gdp/ger_nominal_gdp_state_growth.R", .graph_specs)
+auto_run_graph_file("src/graphs/gdp/ger_bip_annual.R", .graph_specs)
 ```
+The plotting logic is wrapped as a function such that it can be called with different parameters for German and English labeling. 
+
+The plotting logic starts with fetching the raw data from GENESIS. 
+Afterwards, the data is parsed into the standard data format by specifying the neccessary filters. 
+Then, the data is transformed as necessary, in this case by filtering the data to the requested start year. 
+Finally, the plot is built using one of the predefined plot helpers.
+In the following sections, each of the steps is explained in more detail.
+
+The easiest way to create a new graph is to first create an R file in the project root. 
+
+%TODO Picture
+
+Then, start by importing the bootstrap file
 
 ## 1. Retrieving and Parsing the Data
+In this section, we will explain how to fetch data from each of the available data sources.
 
-Most data source adapters in `src/fetch/` return the same tibble shape:
+## GENESIS
+For creating a new graph from a GENESIS table, start in the [GENESIS-Online](https://www-genesis.destatis.de) catalog to find the **table key** used in `genesis_fetch()`.
 
+For parsing the raw results, you usually need three pieces of information: the **value-variable code** to keep, any **classifying filters** to narrow the table, and, for lagged calculations, whether you need one extra **pre-roll year**.
+
+To find the right value-variable code and filter values, fetch the raw table first and inspect its columns:
+
+```r
+source("src/bootstrap.R")
+x <- genesis_fetch("81000-0001")
+
+names(x)
+dplyr::distinct(dplyr::select(x, value_variable_code, value_variable_label))
+
+# Filter for the value-variable code you want to plot, and inspect the attribute codes for the other columns:
+filtered <- dplyr::filter(x, value_variable_code == "BIP005")
+dplyr::distinct(dplyr::select(filtered, dplyr::starts_with("1_variable_attribute")))
+dplyr::distinct(dplyr::select(filtered, dplyr::starts_with("2_variable_attribute")))
 ```
-tibble(date, value, series, unit, geo)
-```
 
+Check the outputs of `value_variable_code` for the series you want to plot. 
+Afterwards, use the `*_attribute_code` fields when the table contains multiple regions, units, or classifications and you only want one of them. 
 
-### `genesis_fetch()`
+If a graph needs a lagged calculation such as year-on-year growth, fetch one extra year of data with `genesis_fetch_window(..., pre_roll = TRUE)` and trim the visible range later with `trim_start_year()`.
+
+#### `genesis_fetch()`
 
 ```r
 genesis_fetch(table_key, start_year = DATA_START_YEAR, end_year = 2100, ...)
@@ -110,7 +132,7 @@ Parameters:
 
 Returns the raw long-format table supplied by GENESIS. Find table identifiers through the [GENESIS-Online](https://www-genesis.destatis.de) catalog.
 
-### `parse_genesis()`
+#### `parse_genesis()`
 
 ```r
 parse_genesis(
@@ -125,12 +147,12 @@ parse_genesis(
 )
 ```
 
-Filters a raw GENESIS result and converts it to `tibble(date, value, series, unit, geo)`.
+Filters a raw GENESIS result and converts it to `tibble(date, value, series, unit, geo)`. This function is neccessary to extract the relevant value-variable from the often large GENESIS tables. 
 
 Parameters:
 
 - `raw`: Table returned by `genesis_fetch()`.
-- `value_var`: Value-variable code to retain, such as `"BIP005"`. Inspect `unique(raw$value_variable_code)` to find available codes.
+- `value_var`: Value-variable code to retain, such as `"BIP005"`.
 - `series_name`: Constant value written to the output `series` column.
 - `unit`: Constant output unit. If `NA`, the first matching GENESIS unit is used.
 - `geo`: Constant value written to the output `geo` column. This does not extract changing geographic labels from `raw`.
@@ -140,7 +162,8 @@ Parameters:
 
 Returns a tibble in the standard shape.
 
-### `fetch_wdi()`
+## WDI
+#### `fetch_wdi()`
 
 ```r
 fetch_wdi(
@@ -162,7 +185,8 @@ Parameters:
 
 Returns `tibble(date, value, series, unit, geo)`.
 
-### `fetch_bundesbank_series()`
+## Bundesbank
+#### `fetch_bundesbank_series()`
 
 ```r
 fetch_bundesbank_series(dataset, key)
@@ -180,7 +204,8 @@ The time series "Harmonisierter Verbraucherpreisindex / Deutschland / Ursprungsw
 
 Returns `tibble(date, value)`. Add `series`, `unit`, and `geo` columns if the selected plot builder requires them.
 
-### `fetch_excel()`
+## Excel
+#### `fetch_excel()`
 
 ```r
 fetch_excel(
@@ -218,7 +243,11 @@ Trade graphs also have higher-level domain fetchers in `fetch_genesis.R` (`fetch
 
 ## 2. Cache the raw fetch
 
-### `with_cache()`
+Use `with_cache()` for any source that is expensive to fetch or likely to be reused. Include every parameter that changes the returned data in the cache key. For GENESIS graphs with a pre-roll year, key the cache on the display start year and the pre-roll flag, just like the graph modules do.
+
+For GENESIS time-series graphs, `genesis_fetch_window(..., pre_roll = TRUE)` fetches one extra year before the visible range, and `trim_start_year()` removes that extra history after parsing or transformation.
+
+#### `with_cache()`
 
 ```r
 with_cache(key, expr, cache_dir = CACHE_DIR)
@@ -248,8 +277,7 @@ raw <- with_cache(paste0("genesis_51000-0005_", year), fetch_ger_trade_commodity
 ## 3. Transform
 
 `src/transform/` has three helpers:
-
-### `yoy_growth()`
+#### `yoy_growth()`
 
 ```r
 yoy_growth(dat, value_col = "value", lag_periods = 1)
@@ -265,7 +293,7 @@ Parameters:
 
 Returns `dat` with the selected value column expressed as percentage growth. The first `lag_periods` values are `NA`.
 
-### `rebase_index()`
+#### `rebase_index()`
 
 ```r
 rebase_index(dat, base_year, value_col = "value")
@@ -281,7 +309,7 @@ Parameters:
 
 Returns `dat` with the selected value column converted to the rebased index.
 
-### `seasonal_adjust()`
+#### `seasonal_adjust()`
 
 ```r
 seasonal_adjust(dat)
@@ -295,13 +323,15 @@ Parameters:
 
 Returns the input data with `value` replaced by the adjusted series. It returns the unadjusted data if the package is unavailable or adjustment fails.
 
-Most GENESIS tables already offer seasonally-adjusted or chain-indexed variants as a `class_filters` code (see the `ger_bip_*` specs), which is preferred over adjusting client-side.
+Most GENESIS tables already offer seasonally adjusted or chain-indexed variants as a `class_filters` code (see the `ger_bip_*` specs), which is preferred over adjusting client-side.
+
+When a graph needs lagged growth calculations, prefer `genesis_fetch_window(..., pre_roll = TRUE)` plus `trim_start_year()` over manual date filtering inside the graph module.
 
 ## 4. Pick a plot builder
 
 All builders are located in `src/plot/` and append the current year to `caption`. Most apply `hwwi_theme()` automatically; `plot_pie()` uses `ggplot2::theme_void()` with its own caption and margin styling.
 
-### `plot_timeseries()`
+#### `plot_timeseries()`
 
 ```r
 plot_timeseries(
@@ -334,7 +364,7 @@ Parameters:
 - `y_breaks`: Y-axis breaks or a ggplot2 waiver.
 - `linewidth`: Width of the plotted line.
 
-### `plot_timeseries_multi()`
+#### `plot_timeseries_multi()`
 
 ```r
 plot_timeseries_multi(
@@ -368,7 +398,7 @@ Parameters:
 - `y_limits`: Optional two-element vector of y-axis limits.
 - `linewidth`: Width of the plotted lines.
 
-### `plot_bar_date()`
+#### `plot_bar_date()`
 
 ```r
 plot_bar_date(
@@ -401,7 +431,7 @@ Parameters:
 - `x_breaks`: Date-break interval.
 - `y_limits`: Optional two-element vector of y-axis limits.
 
-### `plot_bar_growth()`
+#### `plot_bar_growth()`
 
 ```r
 plot_bar_growth(
@@ -428,7 +458,7 @@ Parameters:
 - `color`: Bar color.
 - `x_breaks`: Date-break interval.
 
-### `plot_bar()`
+#### `plot_bar()`
 
 ```r
 plot_bar(
@@ -460,7 +490,7 @@ Parameters:
 - `y_limits`: Optional two-element vector of y-axis limits.
 - `position`: Bar-position adjustment, such as `"dodge"`, `"stack"`, or `"identity"`.
 
-### `plot_bar_deviation()`
+#### `plot_bar_deviation()`
 
 ```r
 plot_bar_deviation(
@@ -492,7 +522,7 @@ Parameters:
 - `negative_label`: Legend label assigned to negative values.
 - `colors`: Colors for positive and negative bars, respectively.
 
-### `plot_bar_ranking()`
+#### `plot_bar_ranking()`
 
 ```r
 plot_bar_ranking(
@@ -520,7 +550,7 @@ Parameters:
 - `big_mark`: Thousands separator used in value labels.
 - `color`: Bar color.
 
-### `plot_dual_axis()`
+#### `plot_dual_axis()`
 
 ```r
 plot_dual_axis(
@@ -557,7 +587,7 @@ Parameters:
 - `y_max_right`: Optional fixed maximum for the right axis.
 - `y_min_at_zero`: Whether both axes should start at zero.
 
-### `plot_pie()`
+#### `plot_pie()`
 
 ```r
 plot_pie(
@@ -591,7 +621,7 @@ Parameters:
 - `x_limit`: Radial plotting limit, including space for outside labels.
 - `plot_margin`: ggplot2 margin around the chart.
 
-### `plot_choropleth_world()`
+#### `plot_choropleth_world()`
 
 ```r
 plot_choropleth_world(
@@ -621,7 +651,7 @@ Parameters:
 - `xlim`: Longitude limits.
 - `ylim`: Latitude limits.
 
-### `plot_choropleth_world_div()`
+#### `plot_choropleth_world_div()`
 
 ```r
 plot_choropleth_world_div(
@@ -648,7 +678,7 @@ Parameters:
 - `xlim`: Longitude limits.
 - `ylim`: Latitude limits.
 
-### `plot_choropleth_ger()`
+#### `plot_choropleth_ger()`
 
 ```r
 plot_choropleth_ger(
@@ -700,10 +730,6 @@ If a chart needs multiple raw fetches or several closely-related variants (e.g. 
 
 At the bottom of the graph file, add an entry to `.graph_specs`. Its `render()` calls your function twice—German first and English second—and writes into the category's two output folders:
 
-To have an AI coding assistant create this block, use
-[prompts/generate_graph_metadata.md](prompts/generate_graph_metadata.md). Give
-it the path of the graph file after the plotting functions are implemented.
-
 ```r
 .graph_specs <- list(list(
   id = "my_new_graph", category = "GDP",
@@ -724,6 +750,8 @@ it the path of the graph file after the plotting functions are implemented.
 if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
 auto_run_graph_file("src/graphs/gdp/my_new_graph.R", .graph_specs)
 ```
+
+Furthermore, at the bottom is boilerplate code to allow standalone execution and debugging.
 
 Conventions to match the existing entries:
 - `id`: unique, snake_case, stable (used for logging and error messages — don't rename once graphs are in production use)

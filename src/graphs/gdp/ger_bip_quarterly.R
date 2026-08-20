@@ -13,7 +13,7 @@
                                              "4_variable_attribute_code" = filter_code),
                         series_name   = series_name,
                         geo           = "DEU") |>
-    dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
+    trim_start_year(DATA_START_YEAR)
   plot_timeseries(dat, y_axis = y_axis, caption = caption,
                   decimal_mark = decimal_mark, big_mark = big_mark,
                   x_breaks = "2 years")

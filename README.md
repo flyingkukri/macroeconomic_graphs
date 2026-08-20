@@ -10,8 +10,9 @@ install.packages(c("restatis", "httr2", "seasonal"))
 ```
 
 ## Log In
+This project relies on Genesis for most of its data. GENESIS is a German government database that requires a free account to access. You can create an account on the [GENESIS website](https://genesis.destatis.de/datenbank/online/).
 
-GENESIS graphs require credentials configured once when first using the project.
+GENESIS requires credentials configured once when first using the project.
 
 The preferred method is using a token. You can get a token from the [GENESIS website](https://genesis.destatis.de/datenbank/online/).
 ![Follow these instructions to get a token](doc/genesis%20token.png)

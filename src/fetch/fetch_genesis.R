@@ -12,6 +12,21 @@ genesis_fetch <- function(table_key, start_year = DATA_START_YEAR, end_year = 21
   )
 }
 
+# Fetch a GENESIS table with optional pre-roll data for lagged calculations.
+# When `pre_roll = TRUE`, the fetch starts one year earlier than `start_year`
+# so functions like yoy_growth() can compute the first visible change without
+# special casing in the graph module.
+genesis_fetch_window <- function(table_key, start_year = DATA_START_YEAR,
+                                 end_year = 2100, pre_roll = FALSE, ...) {
+  fetch_start <- if (pre_roll) as.integer(start_year) - 1L else as.integer(start_year)
+  genesis_fetch(table_key, start_year = fetch_start, end_year = end_year, ...)
+}
+
+# Trim a standard tibble to the requested display window.
+trim_start_year <- function(dat, start_year = DATA_START_YEAR) {
+  dplyr::filter(dat, date >= as.Date(paste0(start_year, "-01-01")))
+}
+
 # Parse a genesis_fetch() tibble into normalized tibble(date, value, series, unit, geo).
 #
 # value_var     : value_variable_code to keep (e.g. "BIP005", "ERW112", "WERTA")

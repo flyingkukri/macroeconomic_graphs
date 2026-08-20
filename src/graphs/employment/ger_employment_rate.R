@@ -36,7 +36,7 @@ ger_employment_rate <- function(y_axis, caption, decimal_mark = ",") {
     series = "erwerbsquote",
     unit   = "%",
     geo    = "DEU"
-  ) |> dplyr::filter(date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
+  )
 
   plot_timeseries(dat, y_axis = y_axis, caption = caption, decimal_mark = decimal_mark)
 }

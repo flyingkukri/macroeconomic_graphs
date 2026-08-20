@@ -2,17 +2,15 @@
 #
 # Annual real-wage index published directly by Destatis. Table 62361-0020
 # contains both the real- and nominal-wage indices plus their annual changes.
-.ger_real_wage_level_helper <- function(display_start_year = DATA_START_YEAR) {
-  custom_start <- !is.null(getOption("hwwi.start.year"))
-  fetch_start <- if (custom_start) DATA_START_YEAR - 1L else DATA_START_YEAR
-  cache_key <- if (custom_start) {
-    paste0("genesis_62361-0020_preroll_", DATA_START_YEAR)
+.ger_real_wage_level_helper <- function(start_year = DATA_START_YEAR, pre_roll = FALSE) {
+  cache_key <- if (pre_roll) {
+    paste0("genesis_62361-0020_preroll_", start_year)
   } else {
-    paste0("genesis_62361-0020_", DATA_START_YEAR)
+    paste0("genesis_62361-0020_", start_year)
   }
   raw <- with_cache(
     cache_key,
-    genesis_fetch("62361-0020", start_year = fetch_start)
+    genesis_fetch_window("62361-0020", start_year = start_year, pre_roll = pre_roll)
   )
 
   required <- c("value_variable_code", "value_variable_label", "value_unit")
@@ -36,7 +34,7 @@
     unit_filter = candidates$value_unit[[1]],
     geo = "DEU"
   ) |>
-    dplyr::filter(date >= as.Date(paste0(display_start_year, "-01-01")))
+    trim_start_year(start_year)
 }
 
 #' Real wage index level (rebased, base year = DATA_START_YEAR), Germany
@@ -48,9 +46,10 @@ ger_real_wage_index <- function(y_axis, caption, decimal_mark = ",", big_mark = 
 
 #' Real wage growth (YoY %), Germany
 ger_real_wage_growth <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
-  dat <- .ger_real_wage_level_helper(DATA_START_YEAR - 1L) |>
+  dat <- .ger_real_wage_level_helper(DATA_START_YEAR, pre_roll = TRUE) |>
     yoy_growth(value_col = "value") |>
-    dplyr::filter(!is.na(value), date >= as.Date(paste0(DATA_START_YEAR, "-01-01")))
+    trim_start_year(DATA_START_YEAR) |>
+    dplyr::filter(!is.na(value))
   plot_bar_growth(dat, y_axis = y_axis, caption = caption,
                    decimal_mark = decimal_mark)
 }
