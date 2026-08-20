@@ -86,73 +86,7 @@ Rscript src/run_trade.R
 
 The main CLI reports per-graph success/failure. The category-specific batch scripts report failures; in both cases, a failure in one graph doesn't stop the rest of the batch.
 
-## Graph module example
-
-Every graph file contains its plotting function and its metadata. For example,
-`src/graphs/gdp/my_new_graph.R` can look like this:
-
-```r
-my_new_graph <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
-  raw <- with_cache(
-    paste0("genesis_XXXXX-XXXX_", DATA_START_YEAR),
-    genesis_fetch("XXXXX-XXXX")
-  )
-
-  dat <- parse_genesis(
-    raw,
-    value_var = "VALUE_CODE",
-    series_name = "my_series",
-    geo = "DEU"
-  )
-
-  plot_timeseries(
-    dat,
-    y_axis = y_axis,
-    caption = caption,
-    decimal_mark = decimal_mark,
-    big_mark = big_mark
-  )
-}
-
-.graph_specs <- list(
-  list(
-    id = "my_new_graph",
-    category = "GDP",
-    label = "My New Graph",
-    render = function() {
-      GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
-      EN  <- file.path(OUT_DIR, "GDP graphs/English labeling")
-
-      render_graph(
-        my_new_graph(
-          y_axis = "Deutsche Achsenbeschriftung",
-          caption = "Datenquelle: Statistisches Bundesamt (Destatis)",
-          decimal_mark = ",",
-          big_mark = "."
-        ),
-        "My New Graph_ger",
-        GER
-      )
-
-      render_graph(
-        my_new_graph(
-          y_axis = "English axis label",
-          caption = "Data source: Federal Statistical Office (Destatis)",
-          decimal_mark = ".",
-          big_mark = ","
-        ),
-        "My New Graph_en",
-        EN
-      )
-    }
-  )
-)
-
-if (!exists("auto_run_graph_file", mode = "function")) {
-  source("src/graph_modules.R")
-}
-auto_run_graph_file("src/graphs/gdp/my_new_graph.R", .graph_specs)
-```
+## Adding new graphs
 
 For more information on how to add a new graph, see [ADDING_GRAPHS.md](ADDING_GRAPHS.md).
 

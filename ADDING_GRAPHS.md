@@ -20,11 +20,11 @@ The flow is based on a data tibble which has 5 fields:
 tibble(date, value, series, unit, geo)
 ```
 
-For all plots that are based on time series, the `date` and `value` fields are necessary. The `date` field is of type `Date` and the `value` field is numeric. More specialized plots may require other fields. The plot-builder reference [below](#4-pick-a-plot-builder) lists the necessary fields for every helper.
+For all plots that are based on time series, the `date` and `value` fields are necessary. The `date` field is of type `Date` and the `value` field is numeric. More specialized plots may require other fields. The plot-builder reference [below](#3-pick-a-plot-builder) lists the necessary fields for every helper.
 
-# Steps for Adding a Graph
+# Step-by-Step Workflow
 
-## 0. Example Graph
+## 1. Example Graph
 This is a simple real module from [src/graphs/gdp/ger_bip_annual.R](src/graphs/gdp/ger_bip_annual.R).
 
 The example shows the usual pattern: fetch, parse, plot, then register the graph in `.graph_specs`.
@@ -81,16 +81,19 @@ Then, the data is transformed as necessary, in this case by filtering the data t
 Finally, the plot is built using one of the predefined plot helpers.
 In the following sections, each of the steps is explained in more detail.
 
-The easiest way to create a new graph is to first create an R file in the project root. 
+The easiest way to create a new graph is to first create an R file in respective folder, e.g. `src/graphs/employment/ger_new_graph.R`.
+Then, start by importing the bootstrap file and just writing out the plotting logic. 
+This way, you can test it in the R console with `Ctrl + Enter`.
+![bootstrap.R](doc/bootstrap.png)
 
-%TODO Picture
+Afterwards, wrap this plotting logic in a function and add the graph_spec metadata at the bottom of the file.
 
-Then, start by importing the bootstrap file
+![finished code](doc/finished%20code.png)
 
-## 1. Retrieving and Parsing the Data
+## 2. Retrieving and Parsing the Data
 In this section, we will explain how to fetch data from each of the available data sources.
 
-## GENESIS
+### GENESIS
 For creating a new graph from a GENESIS table, start in the [GENESIS-Online](https://www-genesis.destatis.de) catalog to find the **table key** used in `genesis_fetch()`.
 
 For parsing the raw results, you usually need three pieces of information: the **value-variable code** to keep, any **classifying filters** to narrow the table, and, for lagged calculations, whether you need one extra **pre-roll year**.
@@ -162,7 +165,7 @@ Parameters:
 
 Returns a tibble in the standard shape.
 
-## WDI
+### WDI
 #### `fetch_wdi()`
 
 ```r
@@ -185,7 +188,7 @@ Parameters:
 
 Returns `tibble(date, value, series, unit, geo)`.
 
-## Bundesbank
+### Bundesbank
 #### `fetch_bundesbank_series()`
 
 ```r
@@ -204,7 +207,7 @@ The time series "Harmonisierter Verbraucherpreisindex / Deutschland / Ursprungsw
 
 Returns `tibble(date, value)`. Add `series`, `unit`, and `geo` columns if the selected plot builder requires them.
 
-## Excel
+### Excel
 #### `fetch_excel()`
 
 ```r
@@ -241,7 +244,7 @@ If none of these fit, add a new `src/fetch/fetch_<source>.R` file with a functio
 
 Trade graphs also have higher-level domain fetchers in `fetch_genesis.R` (`fetch_hh_trade()`, `fetch_ger_trade_by_country()`, `fetch_state_deviation()`, etc.) worth checking before writing raw GENESIS calls from scratch.
 
-## 2. Cache the raw fetch
+## 3. Cache the raw fetch
 
 Use `with_cache()` for any source that is expensive to fetch or likely to be reused. Include every parameter that changes the returned data in the cache key. For GENESIS graphs with a pre-roll year, key the cache on the display start year and the pre-roll flag, just like the graph modules do.
 
@@ -258,7 +261,7 @@ Returns a saved result when one exists; otherwise, evaluates the expression and 
 Parameters:
 
 - `key`: Unique cache identifier. Include every fetch parameter that changes the result.
-- `expr`: Fetch expression to evaluate on a cache miss. R's lazy evaluation prevents it from running on a cache hit.
+- `expr`: Fetch expression to evaluate on a cache miss.
 - `cache_dir`: Directory containing the RDS cache files. Defaults to `CACHE_DIR`.
 
 Include `DATA_START_YEAR` in `key` whenever the fetch depends on it. This ensures that the `--start-year=YYYY` CLI option selects a separate cache entry (see [CLAUDE.md](CLAUDE.md#--start-year-override)):
@@ -274,7 +277,7 @@ For snapshot-style data (a single year, e.g. trade-structure pies), key by that 
 raw <- with_cache(paste0("genesis_51000-0005_", year), fetch_ger_trade_commodity(year))
 ```
 
-## 3. Transform
+## 4. Transform
 
 `src/transform/` has three helpers:
 #### `yoy_growth()`
@@ -327,7 +330,7 @@ Most GENESIS tables already offer seasonally adjusted or chain-indexed variants 
 
 When a graph needs lagged growth calculations, prefer `genesis_fetch_window(..., pre_roll = TRUE)` plus `trim_start_year()` over manual date filtering inside the graph module.
 
-## 4. Pick a plot builder
+## 5. Pick a plot builder
 
 All builders are located in `src/plot/` and append the current year to `caption`. Most apply `hwwi_theme()` automatically; `plot_pie()` uses `ggplot2::theme_void()` with its own caption and margin styling.
 
@@ -375,7 +378,9 @@ plot_timeseries_multi(
 )
 ```
 
-Creates a multiple-series line chart using the `series` column.
+Creates a multiple-series line chart using the `series` column. 
+The series attribute gets added by the fetching function, so the to data tibble only have to be combined with dplyr::bind_rows(). 
+The series names from the tibbles will be displayed below the plot as a legend.
 
 Required fields for the data tibble:
 
@@ -707,7 +712,7 @@ Parameters:
 
 Brand colors (`hwwi_blue`, `hwwi_rubin`, `hwwi_dark_blue`, `hwwi_dark_rubin`, `hwwi_light_blue`, `hwwi_grey`, `hwwi_dark_grey`, and the `hwwi_palette`/`hwwi_palette_rb` vectors) are defined in [src/theme.R](src/theme.R) — reuse them rather than hardcoding new colors.
 
-## 5. Write the graph spec function
+## 6. Write the graph spec function
 
 The final graph is written as a function. 
 Add a function under `src/graphs/<category>/` (`gdp/`, `employment/`, `prices/`, or `trade/` — reuse an existing file if your graph is a close relative of what's already there, e.g. shares a cached raw fetch). The function should take `y_axis`/`caption` (or whatever labels the plot needs) plus `decimal_mark`/`big_mark` as arguments, defaulting to German formatting (`decimal_mark = ","`, `big_mark = "."`) since that's the primary audience — the English call overrides them:
@@ -726,7 +731,7 @@ my_new_graph <- function(y_axis, caption, decimal_mark = ",", big_mark = ".") {
 
 If a chart needs multiple raw fetches or several closely-related variants (e.g. level/growth/volume from the same table), follow the pattern in [src/graphs/gdp/ger_bip_annual.R](src/graphs/gdp/ger_bip_annual.R): a shared private `.helper()` that both fetches and filters, called by several thin public wrapper functions.
 
-## 6. Add the graph module metadata
+## 7. Add the graph module metadata
 
 At the bottom of the graph file, add an entry to `.graph_specs`. Its `render()` calls your function twice—German first and English second—and writes into the category's two output folders:
 
@@ -760,7 +765,7 @@ Conventions to match the existing entries:
   - `GER`: output path of the German labeling version
   - `EN`: output path of the English labeling version
 
-## 7. Test it
+## 8. Test it
 
 The file is directly executable, so the fastest end-to-end check is:
 
