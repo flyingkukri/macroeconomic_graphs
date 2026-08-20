@@ -27,10 +27,10 @@ For all plots that are based on time series, the `date` and `value` fields are n
 ## 1. Example Graph
 This is a simple real module from [src/graphs/gdp/ger_bip_annual.R](src/graphs/gdp/ger_bip_annual.R).
 
-The example shows the usual pattern: fetch, parse, plot, then register the graph in `.graph_specs`.
+Just have a look at the code to get an idea of the structure of a graph file. 
 
 ```r
-# Fetch, parse, and plot a single series
+# Wrap the plot logic in a function
 ger_bip_annual_growth <- function(y_axis, caption, decimal_mark = ",") {
   # 1. Fetch the raw data
   raw <- with_cache(paste0("genesis_81000-0001_", DATA_START_YEAR),
@@ -69,8 +69,6 @@ ger_bip_annual_growth <- function(y_axis, caption, decimal_mark = ",") {
   )
 )
 
-# Boilerplate for standalone execution and debugging
-if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
 auto_run_graph_file("src/graphs/gdp/ger_bip_annual.R", .graph_specs)
 ```
 The plotting logic is wrapped as a function such that it can be called with different parameters for German and English labeling. 
@@ -96,7 +94,7 @@ In this section, we will explain how to fetch data from each of the available da
 ### GENESIS
 For creating a new graph from a GENESIS table, start in the [GENESIS-Online](https://www-genesis.destatis.de) catalog to find the **table key** used in `genesis_fetch()`.
 
-For parsing the raw results, you usually need three pieces of information: the **value-variable code** to keep, any **classifying filters** to narrow the table, and, for lagged calculations, whether you need one extra **pre-roll year**.
+For parsing the raw results, you usually need three pieces of information: the **value-variable code** to keep, any **classifying filters** for only using a specific subset, and, for lagged calculations, whether you need one extra **pre-roll year**.
 
 To find the right value-variable code and filter values, fetch the raw table first and inspect its columns:
 
