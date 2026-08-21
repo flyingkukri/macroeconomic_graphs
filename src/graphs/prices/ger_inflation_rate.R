@@ -1,9 +1,14 @@
-# Monthly CPI year-on-year inflation rate for Germany.
-# Computed from CPI level (PREIS1, table 61111-0002) via 12-month lag.
-ger_inflation_rate <- function(y_axis, caption, decimal_mark = ",") {
-  dat <- fetch_ger_cpi_yoy()
-  plot_timeseries(dat, y_axis = y_axis, caption = caption,
-                  decimal_mark = decimal_mark, x_breaks = "5 years")
+ger_inflation_rate <- function(y_axis, caption, row_indicator = 2,  y_limits = c(-2.5, 10)) {
+  raw <- with_cache(paste0("genesis_61111-0002_", DATA_START_YEAR),
+                    genesis_fetch("61111-0002"))
+  dat <- parse_genesis(raw,
+                       value_var   = "PREIS1",
+                       unit_filter = "%",
+                       series_name = "cpi",
+                       geo         = "DEU",
+                       dropmissing = FALSE)
+  dat <- select_monthly_value(dat, row_indicator = row_indicator)
+  plot_timeseries(dat, y_axis = y_axis, caption = caption, y_limits = y_limits)
 }
 
 # ── Graph module ─────────────────────────────────────────────────────────────────────────────
@@ -13,9 +18,9 @@ list(id = "ger_inflation_rate", category = "Prices", label = "Germany Inflation 
     render = function() {
         GER <- file.path(OUT_DIR, "prices graphs/German labeling")
         EN <- file.path(OUT_DIR, "prices graphs/English labeling")
-        render_graph(ger_inflation_rate("Inflationsrate (Veränderung gg. Vj., in %)", "Datenquelle: Statistisches Bundesamt (Destatis)"),
+        render_graph(ger_inflation_rate("Inflationsrate (Veränderung gg. Vj., in %)", "Quelle: Statistisches Bundesamt (Destatis) (2026)."),
             "GER inflation rate monthly_ger", GER)
-        render_graph(ger_inflation_rate("Inflation Rate (change vs. prev. year, in %)", "Data source: Federal statistical office (Destatis)",
+        render_graph(ger_inflation_rate("Inflation Rate (change vs. prev. year, in %)", "Source: Statistisches Bundesamt (Destatis) (2026).",
             decimal_mark = "."), "GER inflation rate monthly_en", EN)
     })
 )
