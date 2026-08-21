@@ -37,7 +37,7 @@ trim_start_year <- function(dat, start_year = DATA_START_YEAR) {
 parse_genesis <- function(raw, value_var, series_name = "value",
                            unit = NA_character_, geo = "DEU",
                            class_filters = NULL, unit_filter = NULL,
-                           scale = 1) {
+                           scale = 1, dropmissing=TRUE) {
   dat <- raw
   dat <- dat[!is.na(dat$value_variable_code) & dat$value_variable_code == value_var, , drop = FALSE]
   if (!is.null(unit_filter))
@@ -51,7 +51,8 @@ parse_genesis <- function(raw, value_var, series_name = "value",
         dat <- dat[!is.na(dat[[nm]]) & dat[[nm]] == fval, , drop = FALSE]
     }
   }
-  dat <- dat[!is.na(dat$value) & !dat$value %in% c("-", "/", ".", "", "..."), , drop = FALSE]
+  if (dropmissing) {
+    dat <- dat[!is.na(dat$value) & !dat$value %in% c("-", "/", ".", "", "..."), , drop = FALSE]}
   if (nrow(dat) == 0) stop("parse_genesis: no rows after filtering")
   tibble::tibble(
     date   = .genesis_date(dat),

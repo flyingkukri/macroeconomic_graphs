@@ -4,18 +4,20 @@ source("src/config.R")
 source("src/graph_modules.R")
 source("src/theme.R")
 source("src/render.R")
-source("src/fetch/cache.R")
-source("src/fetch/fetch_genesis.R")
-source("src/fetch/fetch_bundesbank.R")
-source("src/fetch/fetch_wdi.R")
-source("src/fetch/fetch_excel.R")
-source("src/transform/growth_rate.R")
-source("src/transform/index_rebase.R")
-source("src/transform/seasonal_adjust.R")
-source("src/plot/plot_timeseries.R")
-source("src/plot/plot_bar.R")
-source("src/plot/plot_choropleth.R")
-source("src/plot/plot_pie.R")
-source("src/plot/plot_dual_axis.R")
-source("src/plot/plot_bar_deviation.R")
-source("src/plot/plot_bar_ranking.R")
+
+# Source all helper functions
+folders <- c(
+  "src/fetch",
+  "src/transform",
+  "src/plot"
+)
+
+for (folder in folders) {
+  files <- list.files(
+    path = folder,
+    pattern = "\\.R$",
+    full.names = TRUE
+  )
+  
+  sapply(files, source)
+}
