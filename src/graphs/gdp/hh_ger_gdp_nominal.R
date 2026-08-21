@@ -1,54 +1,52 @@
-82111-0010
-81000-0001
+.hh_ger_bip_annual_nominal <- function(caption,
+                                      label_ger = "Deutschland",
+                                      label_hh = "Hamburg",
+                                      y_axis_left = "Bruttoinlandsprodukt (in Mio. €)",
+                                      y_axis_right = "Bruttoinlandsprodukt (in Mio. €)",
+                                      decimal_mark = ",",
+                                      big_mark = ".") {
 
-
-#hh_ger_bip_annual_nominal <- function(y_axis, caption, decimal_mark = ",") {
-
-source("src/bootstrap.R")
+#source("src/bootstrap.R")
   
   ger_raw <- with_cache(paste0("genesis_81000-0001_", DATA_START_YEAR),
                     genesis_fetch("81000-0001"))
+  
+  hh_raw <- with_cache(paste0("genesis_82111-0010_", DATA_START_YEAR),
+                       genesis_fetch("82111-0010"))
   
   ger_dat <- parse_genesis(
     ger_raw,
     value_var = "VGR014",
     class_filters = list("2_variable_attribute_code" = "VGRJPM"),
-    series_name = "gdp_nominal_ger",
+    series_name = "Deutschland",
     geo = "DEU",
     scale = 1*1000
   )
-  
-  hh_raw <- with_cache(paste0("genesis_82111-0010_", DATA_START_YEAR),
-                       genesis_fetch("82111-0010"))
   
   hh_dat <- parse_genesis(
     hh_raw,
     value_var = "BIP006",
     class_filters = list(`1_variable_attribute_code` = "02"),
-    series_name = "gdp_nominal_hh",
+    series_name = "Hamburg",
     geo = "DEU",
     scale = 1
   )
-  
-  
   dat <- dplyr::bind_rows(hh_dat, ger_dat)
   
   plot_dual_axis(
     dat = dat,
     caption = "Quelle: Statistisches Bundesamt",
-    y_axis_left = "Bruttoinlandsprodukt Hamburg",
-    y_axis_right = "Bruttoinlandsprodukt Deutschland",
-    series_left = "gdp_nominal_hh",
-    series_right = "gdp_nominal_ger",
+    y_axis_left = y_axis_left,
+    y_axis_right = y_axis_right,
+    series_left = "Hamburg",
+    series_right = "Deutschland",
     decimal_mark = ",", big_mark = ".",
-    colors = c(hwwi_dark_rubin, hwwi_dark_blue), x_breaks = "2 years",
-    y_max_right = NULL, y_min_at_zero = TRUE
+    colors = c(hwwi_dark_rubin, hwwi_dark_blue), x_breaks = "1 year",
+    y_max_right = NULL, y_min_at_zero = TRUE, angle = 45
   )
   
   
-  
-  
-#}
+}
 
 
 
@@ -57,6 +55,29 @@ source("src/bootstrap.R")
   list(
     id = "hh_ger_nominal_bip_annual",
     category = "GDP",
-    label = "Hamburg"
-  )
+    label = "Hamburg and Germany nominal GDP",
+    render = function() {
+      GER <- file.path(OUT_DIR, "GDP graphs/German labeling")
+      EN <- file.path(OUT_DIR, "GDP graphs/English labeling")
+      render_graph(.hh_ger_bip_annual_nominal(caption = "Datenquelle: Statistisches Bundesamt (Destatis)",
+                                           label_ger = "Bruttoinlandsprodukt Deutschland", label_hh = "Bruttoinlandsprodukt Hamburg", y_axis_left = "Bruttoinlandsprodukt (in Mio. €)",
+                                           y_axis_right = "Bruttoinlandsprodukt (in Mio. €)", decimal_mark = ",", big_mark = "."), "GER HH gdp",
+                   GER)
+      render_graph(.hh_ger_bip_annual_nominal(caption = "Data source: Federal statistical office (Destatis)",
+                                           label_ger = "GDP Germany", label_hh = "GDP Hamburg", y_axis_left = "GDP (in million)",
+                                           y_axis_right = "GDP Germany (in million)", decimal_mark = ".", big_mark = ","), "GER HH gdp",
+                   EN)
+    })
 )
+
+if (!exists("auto_run_graph_file", mode = "function")) source("src/graph_modules.R")
+auto_run_graph_file("src/graphs/gdp/hh_ger_gdp_nominal.R", .graph_specs)
+
+
+
+
+
+
+
+
+
