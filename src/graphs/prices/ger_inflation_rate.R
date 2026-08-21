@@ -1,4 +1,4 @@
-ger_inflation_rate <- function(y_axis, caption, row_indicator = 2,  y_limits = c(40, 130)) {
+ger_inflation_rate <- function(y_axis, caption, row_indicator = 2,  y_limits = c(-2.5, 10)) {
   raw <- with_cache(paste0("genesis_61111-0002_", DATA_START_YEAR),
                     genesis_fetch("61111-0002"))
   dat <- parse_genesis(raw,
@@ -6,8 +6,8 @@ ger_inflation_rate <- function(y_axis, caption, row_indicator = 2,  y_limits = c
                        unit_filter = "%",
                        series_name = "cpi",
                        geo         = "DEU",
-                       dropmissing=FALSE)
-  dat <- select_monthly_value(dat, row_number = 2)
+                       dropmissing = FALSE)
+  dat <- select_monthly_value(dat, row_indicator = row_indicator)
   plot_timeseries(dat, y_axis = y_axis, caption = caption, y_limits = y_limits)
 }
 
