@@ -5,7 +5,8 @@ plot_dual_axis <- function(dat, caption,
                             colors = c(hwwi_blue, hwwi_rubin),
                             x_breaks = "5 years",
                             y_max_right = NULL,
-                            y_min_at_zero = TRUE) {
+                            y_min_at_zero = TRUE,
+                            angle = 0) {
   left  <- dat[dat$series == series_left,  ]
   right <- dat[dat$series == series_right, ]
 
@@ -55,6 +56,7 @@ plot_dual_axis <- function(dat, caption,
     ggplot2::theme(
       legend.position  = "bottom",
       axis.title.y     = ggplot2::element_text(color = colors[1]),
-      axis.title.y.right = ggplot2::element_text(color = colors[2])
+      axis.title.y.right = ggplot2::element_text(color = colors[2]),
+      axis.text.x = ggplot2::element_text(angle = angle, hjust = 0.5)
     )
 }

@@ -22,7 +22,24 @@ tibble(date, value, series, unit, geo)
 
 For all plots that are based on time series, the `date` and `value` fields are necessary. The `date` field is of type `Date` and the `value` field is numeric. More specialized plots may require other fields. The plot-builder reference [below](#3-pick-a-plot-builder) lists the necessary fields for every helper.
 
-# Step-by-Step Workflow
+## Folder structure
+The code for this project is located in src. 
+The following tree shows the structure of the src folder and the location of the graph files.
+
+```
+src
+└── graphs # Put new files in 
+           # folders below
+    ├── gdp
+    └── employment
+    └── trade
+    └── prices
+└── fetch  # fetching helpers 
+└── transform # transformations
+└── plot # plotting helpers
+
+```
+Put new graph files in the respective subfolder of `src/graphs/`.
 
 ## 1. Example Graph
 This is a simple real module from [src/graphs/gdp/ger_bip_annual.R](src/graphs/gdp/ger_bip_annual.R).
@@ -79,14 +96,19 @@ Then, the data is transformed as necessary, in this case by filtering the data t
 Finally, the plot is built using one of the predefined plot helpers.
 In the following sections, each of the steps is explained in more detail.
 
+
+## General Workflow
 The easiest way to create a new graph is to first create an R file in respective folder, e.g. `src/graphs/employment/ger_new_graph.R`.
-Then, start by importing the bootstrap file and just writing out the plotting logic. 
+Then, start by importing the bootstrap file (`src/bootstrap.R`) and just writing out the plotting logic. 
+You only need to import the bootstrap file while developing the graph, because it sources all the necessary helpers and sets up the environment.
 This way, you can test it in the R console with `Ctrl + Enter`.
 ![bootstrap.R](doc/bootstrap.png)
 
-Afterwards, wrap this plotting logic in a function and add the graph_spec metadata at the bottom of the file.
+Afterwards, delete the bootstrap import, as it is no longer neccessary and wrap this plotting logic in a function and add the graph_spec metadata at the bottom of the file.
 
 ![finished code](doc/finished%20code.png)
+
+# Step-by-Step Workflow
 
 ## 2. Retrieving and Parsing the Data
 In this section, we will explain how to fetch data from each of the available data sources.
