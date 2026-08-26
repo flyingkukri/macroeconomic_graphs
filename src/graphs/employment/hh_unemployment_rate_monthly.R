@@ -30,7 +30,8 @@
     x_breaks = "1 year",
     y_limits = NULL,
     y_breaks = ggplot2::waiver(),
-    linewidth = 1.8
+    linewidth = 1.8,
+    angle = 45
   )
 }
 
