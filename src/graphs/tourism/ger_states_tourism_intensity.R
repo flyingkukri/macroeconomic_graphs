@@ -1,6 +1,6 @@
 .ger_states_tourism_intensity <- function(caption,
                                           label_states = "Bundesländer",
-                                          label_ger = 
+                                          label_ger = "Deutschland",
                                           y_axis = "Tourismusintensität",
                                           decimal_mark = ",",
                                           big_mark = "."
